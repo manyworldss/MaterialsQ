@@ -1,0 +1,98 @@
+/* MaterialIQ design tokens — dark-only "intelligence tool" system.
+   Ported verbatim from the MaterialIQ Design System (colors/type/spacing/effects/base).
+   Fonts load from Google Fonts CDN; drop .woff2 files + @font-face here to self-host. */
+@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root {
+  /* Surfaces (deep, cool-neutral) */
+  --bg-0: #0A0C10;
+  --bg-1: #0F1218;
+  --surface-card: #141924;
+  --surface-card-2: #1A2130;
+  --surface-overlay: rgba(10, 12, 16, 0.82);
+
+  /* Borders & lines */
+  --border-1: rgba(255, 255, 255, 0.08);
+  --border-2: rgba(255, 255, 255, 0.14);
+  --border-accent: rgba(139, 92, 246, 0.45);
+
+  /* Text */
+  --fg-1: #EDEFF4;
+  --fg-2: #9AA3B2;
+  --fg-3: #5C6572;
+  --fg-inverse: #0A0C10;
+
+  /* Accent — electric violet. The ONLY brand hue. */
+  --accent: #8B5CF6;
+  --accent-bright: #A78BFA;
+  --accent-dim: #6D45D6;
+  --accent-tint: rgba(139, 92, 246, 0.12);
+  --accent-tint-2: rgba(139, 92, 246, 0.22);
+
+  /* Score semantics — neutral by default; color ONLY at extremes */
+  --score-neutral: #EDEFF4;
+  --score-high: #34D399;
+  --score-high-tint: rgba(52, 211, 153, 0.12);
+  --score-low: #F87171;
+  --score-low-tint: rgba(248, 113, 113, 0.12);
+
+  /* Semantic aliases */
+  --text-body: var(--fg-1);
+  --text-muted: var(--fg-2);
+  --text-link: var(--accent-bright);
+  --surface-page: var(--bg-0);
+  --surface-raised: var(--bg-1);
+  --focus-ring: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--accent);
+
+  /* Type */
+  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-md: 15px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 34px;
+  --text-3xl: 52px;
+  --text-score: 44px;
+  --text-score-sm: 22px;
+  --leading-tight: 1.15;
+  --leading-body: 1.55;
+  --tracking-caps: 0.08em;
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Spacing / radii / sizing — 4px grid */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+  --control-h-sm: 28px;
+  --control-h-md: 36px;
+  --control-h-lg: 44px;
+  --popup-w: 380px;
+
+  /* Elevation, glow, motion */
+  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 16px rgba(0,0,0,0.35);
+  --shadow-pop: 0 1px 0 rgba(255,255,255,0.05) inset, 0 12px 32px rgba(0,0,0,0.5);
+  --glow-accent: 0 0 0 1px var(--border-accent), 0 0 24px rgba(139,92,246,0.25);
+  --glow-high: 0 0 20px rgba(52,211,153,0.18);
+  --ease-out: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 120ms;
+  --dur-base: 160ms;
+  --dur-slow: 200ms;
+  --transition-ui: all var(--dur-base) var(--ease-out);
+}

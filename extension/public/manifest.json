@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "MaterialIQ Beta",
+  "version": "0.1.0",
+  "description": "Helping consumers instantly understand product quality and value.",
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Analyze Product"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.uniqlo.com/us/en/products/*"
+      ],
+      "js": [
+        "src/content.js"
+      ]
+    }
+  ],
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://www.uniqlo.com/*"
+  ]
+}
