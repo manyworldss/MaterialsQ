@@ -1,0 +1,22 @@
+# Railway / Nixpacks build for the ONE service that serves both the MaterialIQ
+# landing page (web/dist, static) and the Express API (server/, /api/* + /api/go
+# Skimlinks redirect). Keep the Railway service Root Directory = repo root so the
+# web/ and server/ subdirs and the shared src/ aliases are all in the build context.
+providers = ["node"]
+
+[phases.setup]
+nixPkgs = ["nodejs_20"]
+
+[phases.install]
+# --include=dev because the build needs vite/tsc (web devDeps); Railway installs
+# with NODE_ENV=production otherwise, which would skip them.
+cmds = [
+  "npm --prefix server install --include=dev",
+  "npm --prefix web install --include=dev",
+]
+
+[phases.build]
+cmds = ["npm --prefix web run build"]
+
+[start]
+cmd = "cd server && npm start"

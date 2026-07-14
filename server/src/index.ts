@@ -6,6 +6,9 @@
 import 'dotenv/config';
 import { createHash } from 'node:crypto';
 import { appendFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import { summarizeReviews, type ReviewSummaryResult } from './summarize.js';
@@ -93,20 +96,36 @@ app.post('/api/waitlist', async (req, res) => {
 });
 
 // Affiliate redirect endpoint.
-// In production, this wraps the target URL in a VigLink or Skimlinks redirect URL
-// using your publisher ID. This bypasses client-side ad-blockers.
+// Wraps the outbound merchant URL in the Skimlinks redirect using our publisher
+// ID (set SKIMLINKS_ID). Doing it server-side keeps the ID out of the extension
+// bundle and survives client-side ad-blockers. Falls back to a direct redirect
+// if SKIMLINKS_ID is unset (e.g. local dev), so links always work.
+const SKIMLINKS_ID = process.env.SKIMLINKS_ID?.trim();
 app.get('/api/go', (req, res) => {
   const target = req.query.target;
-  if (typeof target !== 'string' || !target.startsWith('http')) {
+  if (typeof target !== 'string' || !/^https?:\/\//.test(target)) {
     return res.status(400).send('Invalid target URL');
   }
-  
-  // TODO: Wrap with actual affiliate network URL (e.g. VigLink/Skimlinks)
-  // Example: const skimlinksUrl = `https://go.skimresources.com/?id=YOUR_ID&url=${encodeURIComponent(target)}`;
-  // For now, just redirect directly to the target.
-  console.log(`[affiliate] Redirecting to: ${target}`);
-  res.redirect(302, target);
+  if (SKIMLINKS_ID) {
+    // xs=1 marks this as an external (API) link per Skimlinks' redirector spec.
+    const skim = `https://go.skimresources.com/?id=${encodeURIComponent(SKIMLINKS_ID)}&xs=1&url=${encodeURIComponent(target)}`;
+    return res.redirect(302, skim);
+  }
+  return res.redirect(302, target);
 });
+
+// Serve the built landing page (web/dist) from this same service, so one Railway
+// domain hosts both the marketing site and the /api routes above (single origin
+// for Skimlinks to approve). Skipped if the build isn't present (pure API dev).
+const WEB_DIST = resolve(dirname(fileURLToPath(import.meta.url)), '../../web/dist');
+if (existsSync(WEB_DIST)) {
+  app.use(express.static(WEB_DIST));
+  // SPA fallback: any non-API GET returns index.html.
+  app.get(/^\/(?!api\/|health$).*/, (_req, res) => res.sendFile(resolve(WEB_DIST, 'index.html')));
+  console.log(`[web] Serving landing page from ${WEB_DIST}`);
+} else {
+  console.log(`[web] No landing build at ${WEB_DIST} — API only.`);
+}
 
 const PORT = Number(process.env.PORT) || 8787;
 app.listen(PORT, () => {

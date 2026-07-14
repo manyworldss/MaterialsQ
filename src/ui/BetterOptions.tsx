@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import type { BetterOption } from '../engine/types';
+import { affiliateUrl } from '../lib/config';
 
 /* Cross-retailer "better value" options. The side panel's headline value-add:
    for any product, where to get more for your money. Each row links out to a
@@ -8,7 +9,7 @@ export function BetterOptions({ options }: { options: BetterOption[] }) {
   if (options.length === 0) return null;
   const open = (o: BetterOption) => {
     if (o.url) {
-      window.open(`http://localhost:8787/api/go?target=${encodeURIComponent(o.url)}`, '_blank', 'noopener');
+      window.open(affiliateUrl(o.url), '_blank', 'noopener');
     } else {
       window.open(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(o.name)}`, '_blank', 'noopener');
     }

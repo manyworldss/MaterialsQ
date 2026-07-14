@@ -4,6 +4,7 @@ import { AlertTriangle, Check, ExternalLink, Info, RefreshCw, Settings2, Share2 
 import { Badge, Button, Card, CardRow, IconButton, Tabs } from '../design-system/core';
 import { ScoreBar, StarRating, VerdictPill, scoreTone } from '../design-system/scores';
 import type { Analysis } from '../engine/types';
+import { affiliateUrl } from '../lib/config';
 
 const VERDICT_TEXT: Record<string, string> = { worth: 'Worth it', fair: 'Fair price', skip: 'Skip this one' };
 
@@ -83,7 +84,7 @@ export function Scorecard({
   const openAlternative = () => {
     if (!analysis.alternative) return;
     if (analysis.alternative.url) {
-      window.open(`http://localhost:8787/api/go?target=${encodeURIComponent(analysis.alternative.url)}`, '_blank', 'noopener');
+      window.open(affiliateUrl(analysis.alternative.url), '_blank', 'noopener');
     } else {
       window.open(`https://www.google.com/search?tbm=shop&q=${encodeURIComponent(analysis.alternative.name)}`, '_blank', 'noopener');
     }
