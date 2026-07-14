@@ -1,52 +1,70 @@
-/* MaterialIQ design tokens — dark-only "intelligence tool" system.
-   Ported verbatim from the MaterialIQ Design System (colors/type/spacing/effects/base).
-   Fonts load from Google Fonts CDN; drop .woff2 files + @font-face here to self-host. */
-@import url('https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+/* MaterialIQ design tokens — cream fabric · azure · ink · Archivo.
+   :root only (no element styles) so this can be injected into a Shadow DOM by the
+   content script. Element/base rules live in base.css. */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 :root {
-  /* Surfaces (deep, cool-neutral) */
-  --bg-0: #0A0C10;
-  --bg-1: #0F1218;
-  --surface-card: #141924;
-  --surface-card-2: #1A2130;
-  --surface-overlay: rgba(10, 12, 16, 0.82);
+  /* Surfaces (warm cream paper/fabric) */
+  --bg-0: #F2EFE9;
+  --bg-1: #ECE7DD;
+  --surface-card: #FAF8F3;
+  --surface-card-2: #E7E2D6;
+  --surface-overlay: rgba(22, 24, 26, 0.45);
 
-  /* Borders & lines */
-  --border-1: rgba(255, 255, 255, 0.08);
-  --border-2: rgba(255, 255, 255, 0.14);
-  --border-accent: rgba(139, 92, 246, 0.45);
+  /* Ink (near-black bands + dark UI + injected badge) */
+  --ink-0: #16181A;
+  --ink-1: #1F2226;
+  --ink-2: #2A2E33;
+
+  /* Glass (extension panel over retailer pages) */
+  --glass-fill: rgba(250, 248, 243, 0.74);
+  --glass-fill-strong: rgba(250, 248, 243, 0.88);
+  --glass-border: rgba(22, 24, 26, 0.14);
+  --glass-blur: 20px;
+
+  /* Borders */
+  --border-1: rgba(22, 24, 26, 0.14);
+  --border-2: rgba(22, 24, 26, 0.28);
+  --border-accent: rgba(0, 119, 230, 0.45);
+  --border-inverse: rgba(242, 239, 233, 0.16);
+  --border-inverse-2: rgba(242, 239, 233, 0.30);
 
   /* Text */
-  --fg-1: #EDEFF4;
-  --fg-2: #9AA3B2;
-  --fg-3: #5C6572;
-  --fg-inverse: #0A0C10;
+  --fg-1: #16181A;
+  --fg-2: #5B6066;
+  --fg-3: #8D9198;
+  --fg-inverse: #F2EFE9;
+  --fg-inverse-2: #A9ADA6;
 
-  /* Accent — electric violet. The ONLY brand hue. */
-  --accent: #8B5CF6;
-  --accent-bright: #A78BFA;
-  --accent-dim: #6D45D6;
-  --accent-tint: rgba(139, 92, 246, 0.12);
-  --accent-tint-2: rgba(139, 92, 246, 0.22);
+  /* Accent — azure. The ONLY brand hue. */
+  --accent: #0077E6;
+  --accent-bright: #2B93F2;
+  --accent-dim: #005BB4;
+  --accent-tint: rgba(0, 119, 230, 0.10);
+  --accent-tint-2: rgba(0, 119, 230, 0.18);
 
-  /* Score semantics — neutral by default; color ONLY at extremes */
-  --score-neutral: #EDEFF4;
-  --score-high: #34D399;
-  --score-high-tint: rgba(52, 211, 153, 0.12);
-  --score-low: #F87171;
-  --score-low-tint: rgba(248, 113, 113, 0.12);
+  /* Score semantics — pigment, not neon */
+  --score-neutral: #16181A;
+  --score-high: #0E7C4A;
+  --score-high-tint: rgba(14, 124, 74, 0.10);
+  --score-low: #C0392B;
+  --score-low-tint: rgba(192, 57, 43, 0.10);
 
-  /* Semantic aliases */
+  /* Aliases */
   --text-body: var(--fg-1);
   --text-muted: var(--fg-2);
-  --text-link: var(--accent-bright);
+  --text-link: var(--accent);
   --surface-page: var(--bg-0);
-  --surface-raised: var(--bg-1);
+  --surface-raised: var(--surface-card);
   --focus-ring: 0 0 0 2px var(--bg-0), 0 0 0 4px var(--accent);
 
   /* Type */
-  --font-sans: 'Schibsted Grotesk', system-ui, -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  --font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+  --display-stretch: 125%;
+  --display-weight: 800;
+  --display-tracking: -0.01em;
   --text-xs: 11px;
   --text-sm: 13px;
   --text-md: 15px;
@@ -54,17 +72,17 @@
   --text-xl: 24px;
   --text-2xl: 34px;
   --text-3xl: 52px;
+  --text-4xl: 76px;
   --text-score: 44px;
-  --text-score-sm: 22px;
-  --leading-tight: 1.15;
-  --leading-body: 1.55;
+  --text-score-sm: 20px;
+  --tracking-label: 0.12em;
   --tracking-caps: 0.08em;
-  --weight-regular: 400;
-  --weight-medium: 500;
-  --weight-semibold: 600;
-  --weight-bold: 700;
+  --tracking-body: -0.005em;
+  --leading-tight: 0.95;
+  --leading-snug: 1.15;
+  --leading-body: 1.5;
 
-  /* Spacing / radii / sizing — 4px grid */
+  /* Spacing / radii / controls */
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -75,24 +93,32 @@
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
+  --space-24: 96px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --radius-pill: 999px;
   --control-h-sm: 28px;
   --control-h-md: 36px;
   --control-h-lg: 44px;
   --popup-w: 380px;
+  --page-max-w: 1180px;
 
-  /* Elevation, glow, motion */
-  --shadow-card: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 16px rgba(0,0,0,0.35);
-  --shadow-pop: 0 1px 0 rgba(255,255,255,0.05) inset, 0 12px 32px rgba(0,0,0,0.5);
-  --glow-accent: 0 0 0 1px var(--border-accent), 0 0 24px rgba(139,92,246,0.25);
-  --glow-high: 0 0 20px rgba(52,211,153,0.18);
+  /* Texture */
+  --texture-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.09 0 0 0 0 0.09 0 0 0 0 0.10 0 0 0 0.055 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --texture-grain-light: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.95 0 0 0 0 0.94 0 0 0 0 0.91 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* Elevation — soft print shadows, never glow */
+  --shadow-card: 0 1px 0 rgba(22, 24, 26, 0.04), 0 8px 24px rgba(22, 24, 26, 0.07);
+  --shadow-pop: 0 16px 48px rgba(22, 24, 26, 0.16);
+  --shadow-glass: 0 2px 4px rgba(22, 24, 26, 0.06), 0 24px 64px rgba(22, 24, 26, 0.22);
+
+  /* Motion */
   --ease-out: cubic-bezier(0.2, 0, 0, 1);
   --dur-fast: 120ms;
-  --dur-base: 160ms;
+  --dur-ui: 160ms;
   --dur-slow: 200ms;
-  --transition-ui: all var(--dur-base) var(--ease-out);
+  --dur-reveal: 550ms;
+  --transition-ui: all var(--dur-ui) var(--ease-out);
 }

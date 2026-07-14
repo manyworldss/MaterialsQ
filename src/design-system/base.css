@@ -1,15 +1,49 @@
-/* MaterialIQ base rules. Import after tokens.css on full-page surfaces
-   (popup, options). NOT imported by the content script — the injected badge
-   must never restyle the retailer's page. */
+/* MaterialIQ base rules — import after tokens.css on full-page surfaces (popup,
+   options). NOT injected into the content-script shadow (only tokens are). */
+* { box-sizing: border-box; }
+
 body {
   margin: 0;
-  background: var(--surface-page);
-  color: var(--text-body);
+  background-color: var(--bg-0);
+  background-image: var(--texture-grain);
+  color: var(--fg-1);
   font-family: var(--font-sans);
   font-size: var(--text-md);
   line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
   -webkit-font-smoothing: antialiased;
 }
+
 a { color: var(--text-link); text-decoration: none; transition: var(--transition-ui); }
-a:hover { color: var(--fg-1); }
+a:hover { color: var(--accent-dim); }
 ::selection { background: var(--accent-tint-2); }
+
+/* Visible-but-clean scrollbar — clearly a scrollbar, rounded, on-brand. */
+* { scrollbar-width: thin; scrollbar-color: rgba(22, 24, 26, 0.35) transparent; }
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(22, 24, 26, 0.3);
+  border-radius: 999px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(22, 24, 26, 0.48); background-clip: padding-box; }
+button, input, select, textarea { font-family: inherit; }
+:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+/* Ink band — dark sections carry light grain */
+.miq-ink {
+  background-color: var(--ink-0);
+  background-image: var(--texture-grain-light);
+  color: var(--fg-inverse);
+}
+
+@keyframes miq-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes miq-spin {
+  to { transform: rotate(360deg); }
+}

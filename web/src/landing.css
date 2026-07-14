@@ -1,113 +1,57 @@
-/* Landing-only polish. Builds ON the MaterialIQ tokens — adds depth, grain, and
-   restrained motion without touching the brand's color/type/number rules.
-   Blur is deliberately avoided (brand: no blur in v1); depth comes from grain,
-   a single ambient wash, hairlines, and layering. */
+/* Landing-only: smooth-scroll plumbing + skip link. Visual tokens live in
+   ds/tokens.css; components carry their own styles. */
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
 
-/* Fine film grain across the page — breaks the flat-vector sterility the audit
-   flags, and reads as "instrument surface" for a dark intelligence tool. */
-.miq-grain::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  opacity: 0.04;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* One ambient wash behind the hero. Subtle atmosphere, not a competing glow —
-   the live scorecard keeps its status as the single glowing element per view. */
-.miq-hero {
-  position: relative;
-  isolation: isolate;
-}
-.miq-hero::before {
-  content: '';
-  position: absolute;
-  inset: -25% -10% auto -10%;
-  height: 640px;
-  z-index: -1;
-  background: radial-gradient(58% 360px at 28% -5%, rgba(139, 92, 246, 0.11), transparent 72%);
-  pointer-events: none;
-}
-
-/* Sticky nav — solid (no blur), hairline base. */
-.miq-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--bg-0) 92%, transparent);
-  border-bottom: 1px solid var(--border-1);
-}
-
-/* Scroll reveal — GPU transform + opacity, staggered by inline delay. */
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 680ms var(--ease-out), transform 680ms var(--ease-out);
-  will-change: opacity, transform;
-}
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
-}
 @media (prefers-reduced-motion: reduce) {
-  .reveal {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
 }
 
-/* Editorial step rows (replace the 3 generic cards). */
-.miq-step {
-  transition: border-color var(--dur-base) var(--ease-out), background var(--dur-base) var(--ease-out);
-}
-.miq-step:hover {
-  border-color: var(--border-2);
-}
-.miq-step:hover .miq-step-num {
-  color: var(--accent-bright);
-}
-.miq-step-num {
-  transition: color var(--dur-base) var(--ease-out);
-}
-
-/* Accessible focus everywhere on the marketing surface. */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-  border-radius: var(--radius-sm);
-}
-
-/* Nav link active/hover affordance. */
-.miq-navlink {
-  position: relative;
-  color: var(--fg-2);
-}
-.miq-navlink::after {
-  content: '';
+.miq-skip {
   position: absolute;
-  left: 0;
-  bottom: -6px;
-  height: 1px;
-  width: 0;
-  background: var(--accent-bright);
-  transition: width var(--dur-base) var(--ease-out);
-}
-.miq-navlink:hover {
+  left: 16px;
+  top: -48px;
+  z-index: 60;
+  background: var(--surface-card);
+  border: 1px solid var(--border-2);
   color: var(--fg-1);
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  transition: top var(--dur-ui) var(--ease-out);
 }
-.miq-navlink:hover::after {
-  width: 100%;
+.miq-skip:focus { top: 12px; }
+
+/* Nav link hover affordance */
+.miq-navlink { color: var(--fg-2); transition: color var(--dur-ui) var(--ease-out); }
+.miq-navlink:hover { color: var(--fg-1); }
+
+/* Responsive additions */
+.hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+.nav-links {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    text-align: center;
+  }
+  .hero-grid > div:first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .nav-links {
+    gap: 12px;
+  }
+  .nav-links .miq-navlink {
+    display: none;
+  }
 }

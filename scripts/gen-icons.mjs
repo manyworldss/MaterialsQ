@@ -1,11 +1,12 @@
-/* Generates placeholder toolbar icons: a violet rounded square on the dark
-   page color. No real logo exists yet (per the design brief) — swap these for a
-   bespoke mark later. Outputs public/icons/icon-{16,32,48,128}.png. */
+/* Generates the MaterialIQ toolbar icons: the brand hang-tag mark in azure, the
+   signature element of the design system (the score is shown on a garment tag).
+   Anti-aliased via 4x supersampling. Transparent background so it reads on both
+   light and dark Chrome toolbars. Outputs public/icons/icon-{16,32,48,128}.png. */
 import { deflateSync } from 'node:zlib';
 import { mkdirSync, writeFileSync } from 'node:fs';
 
-const BG = [10, 12, 16, 255]; // #0A0C10
-const FG = [139, 92, 246, 255]; // #8B5CF6 accent
+const AZURE = [0, 119, 230]; // #0077E6
+const SS = 4; // supersampling factor for smooth edges
 
 function crc32(buf) {
   let c = ~0;
@@ -25,29 +26,53 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc]);
 }
 
+/* Signed-distance test for a rounded rectangle; <= 0 is inside. */
+function insideRoundRect(px, py, x0, y0, x1, y1, r) {
+  const hw = (x1 - x0) / 2;
+  const hh = (y1 - y0) / 2;
+  const cx = (x0 + x1) / 2;
+  const cy = (y0 + y1) / 2;
+  const qx = Math.abs(px - cx) - (hw - r);
+  const qy = Math.abs(py - cy) - (hh - r);
+  const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r;
+  return d <= 0;
+}
+
+/* Coverage 0..1 of the hang-tag shape (tag body minus punched eyelet) at pixel. */
+function coverage(x, y, D) {
+  // Portrait tag, slightly inset. Eyelet punched near the top-center.
+  const x0 = 0.28 * D;
+  const x1 = 0.72 * D;
+  const y0 = 0.15 * D;
+  const y1 = 0.85 * D;
+  const r = 0.09 * D;
+  const eyeX = D / 2;
+  const eyeY = y0 + 0.15 * (y1 - y0);
+  const eyeR = 0.055 * D;
+  let hit = 0;
+  for (let sy = 0; sy < SS; sy++) {
+    for (let sx = 0; sx < SS; sx++) {
+      const px = x + (sx + 0.5) / SS;
+      const py = y + (sy + 0.5) / SS;
+      const inTag = insideRoundRect(px, py, x0, y0, x1, y1, r);
+      const inEye = (px - eyeX) ** 2 + (py - eyeY) ** 2 <= eyeR * eyeR;
+      if (inTag && !inEye) hit++;
+    }
+  }
+  return hit / (SS * SS);
+}
+
 function png(size) {
-  const inset = Math.round(size * 0.18);
-  const radius = Math.round(size * 0.24);
   const raw = Buffer.alloc(size * (size * 4 + 1));
   let o = 0;
   for (let y = 0; y < size; y++) {
     raw[o++] = 0; // filter: none
     for (let x = 0; x < size; x++) {
-      // rounded-square mask for the FG mark
-      const inX = x >= inset && x < size - inset;
-      const inY = y >= inset && y < size - inset;
-      let fg = inX && inY;
-      // knock out the corners to fake a radius
-      const cx = x < size / 2 ? inset + radius : size - inset - radius;
-      const cy = y < size / 2 ? inset + radius : size - inset - radius;
-      if (fg && ((x < inset + radius || x >= size - inset - radius) && (y < inset + radius || y >= size - inset - radius))) {
-        fg = (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius;
-      }
-      const c = fg ? FG : BG;
-      raw[o++] = c[0];
-      raw[o++] = c[1];
-      raw[o++] = c[2];
-      raw[o++] = c[3];
+      const a = coverage(x, y, size);
+      raw[o++] = AZURE[0];
+      raw[o++] = AZURE[1];
+      raw[o++] = AZURE[2];
+      raw[o++] = Math.round(a * 255);
     }
   }
   const ihdr = Buffer.alloc(13);

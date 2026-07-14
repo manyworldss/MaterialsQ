@@ -82,6 +82,24 @@ export interface Comparable {
   retailer: string;
   price: number;
   qualityScore: number;
+  url: string;
+}
+
+/** An alternative option bubbled up to the UI. */
+export interface BetterOption {
+  name: string;
+  retailer: string;
+  price: number;
+  qualityScore: number;
+  reason: string;
+  url: string;
+}
+
+/** Price reframed around use, not sticker. */
+export interface CostPerWear {
+  perWear: number; // dollars per wear
+  wears: number; // estimated lifetime wears
+  years: number; // estimated lifespan
 }
 
 export interface Analysis {
@@ -99,6 +117,12 @@ export interface Analysis {
   verdictCopy: string;
   /** A cheaper comparable of similar quality, when one beats this on value. */
   alternative: Comparable | null;
+  /** Up to a few cross-retailer options that beat this product on value. */
+  betterOptions: BetterOption[];
+  /** Price per wear, when a price is known. */
+  costPerWear: CostPerWear | null;
+  /** Material red-flags and care instructions based on composition. */
+  careAndFlags: { text: string; type: 'warning' | 'info' }[];
   /** Rubric version the score was computed under — printed in the UI for auditability. */
   rubricVersion: string;
   analyzedMs: number;

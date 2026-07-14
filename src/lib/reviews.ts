@@ -5,7 +5,7 @@
 import type { ReviewSummary } from '../engine/types';
 import { BACKEND_URL } from './config';
 
-export async function fetchReviewSummary(title: string, reviews: string[]): Promise<ReviewSummary | null> {
+export async function fetchReviewSummary(title: string, reviews: string[], url?: string): Promise<ReviewSummary | null> {
   if (reviews.length === 0) return null;
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 12_000);
@@ -13,7 +13,8 @@ export async function fetchReviewSummary(title: string, reviews: string[]): Prom
     const res = await fetch(`${BACKEND_URL}/api/summarize`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ title, reviews }),
+      // url lets the backend cache by product identity (reused across users).
+      body: JSON.stringify({ title, reviews, url }),
       signal: controller.signal,
     });
     if (!res.ok) return null;

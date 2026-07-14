@@ -28,40 +28,55 @@ function ensureFonts() {
   const link = document.createElement('link');
   link.id = 'miq-fonts';
   link.rel = 'stylesheet';
-  link.href = 'https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
+  link.href = 'https://fonts.googleapis.com/css2?family=Archivo:wght@400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap';
   document.head.appendChild(link);
 }
 
-/* Find where to place the badge — next to the price if we can, else float it. */
-function findAnchor(price: number | null): { el: Element; inline: boolean } {
-  const selectors = ['[class*="price"]', '[data-testid*="price"]', 'span[itemprop="price"]'];
-  for (const sel of selectors) {
-    const el = document.querySelector(sel);
-    if (el && el.textContent && (price == null || el.textContent.includes(String(Math.round(price))))) {
-      return { el, inline: true };
+/* Find the on-page element that DISPLAYS the price, by matching the value —
+   retailer-agnostic (class names vary; the price string doesn't). Prefers the
+   smallest (leaf) element so we anchor to the price itself, not a big container. */
+function findPriceEl(price: number | null): Element | null {
+  if (price == null) return null;
+  const exact = price.toFixed(2); // "29.90"
+  const rounded = String(Math.round(price));
+  const nodes = document.querySelectorAll('span, div, p, b, strong, ins, bdi, [class*="price" i], [data-testid*="price" i], [itemprop="price"]');
+  let best: Element | null = null;
+  let bestLen = Infinity;
+  for (const el of Array.from(nodes)) {
+    const t = (el.textContent || '').replace(/\s+/g, '');
+    if (!t || t.length > 24) continue; // skip large containers
+    const hit = t.includes(exact) || (/[$£€]/.test(t) && t.replace(/[^\d.]/g, '').startsWith(rounded));
+    if (hit && t.length < bestLen) {
+      best = el;
+      bestLen = t.length;
     }
   }
-  return { el: document.body, inline: false };
+  return best;
 }
 
+let badgeCleanup: (() => void) | null = null;
+
+function removeBadge() {
+  badgeCleanup?.();
+  badgeCleanup = null;
+  document.getElementById('miq-badge-host')?.remove();
+}
+
+/* Mount the badge as a body-level positioned overlay that TRACKS the price
+   element. Because it lives on <body> (outside the retailer's React tree), the
+   page's re-renders can't wipe it — the old sibling-injection approach got
+   removed on re-render, which is why it "didn't always pop up". A light loop
+   re-finds the price if React swaps the node and repositions on scroll/resize. */
 function mountBadge(analysis: Analysis) {
-  if (document.getElementById('miq-badge-host')) return;
+  removeBadge();
   ensureFonts();
 
-  const { el, inline } = findAnchor(analysis.product.price);
   const host = document.createElement('span');
   host.id = 'miq-badge-host';
-  if (inline) {
-    host.style.marginLeft = '10px';
-    host.style.verticalAlign = 'middle';
-    el.insertAdjacentElement('afterend', host);
-  } else {
-    host.style.position = 'fixed';
-    host.style.right = '20px';
-    host.style.bottom = '20px';
-    host.style.zIndex = '2147483647';
-    document.body.appendChild(host);
-  }
+  host.style.position = 'absolute';
+  host.style.top = '-9999px';
+  host.style.zIndex = '2147483647';
+  document.body.appendChild(host);
 
   const shadow = host.attachShadow({ mode: 'open' });
   const style = document.createElement('style');
@@ -69,23 +84,76 @@ function mountBadge(analysis: Analysis) {
   shadow.appendChild(style);
   const mount = document.createElement('div');
   shadow.appendChild(mount);
-
-  createRoot(mount).render(
+  const root = createRoot(mount);
+  root.render(
     <StrictMode>
       <InlineBadge analysis={analysis} docsUrl={DOCS_URL} />
     </StrictMode>,
   );
+
+  const BADGE_W = 130;
+  const BADGE_H = 32;
+  let anchor: Element | null = null;
+  const reposition = () => {
+    if (!anchor || !anchor.isConnected) anchor = findPriceEl(analysis.product.price); // re-find if React swapped it
+    const r = anchor?.isConnected ? anchor.getBoundingClientRect() : null;
+    if (r && (r.width || r.height)) {
+      host.style.position = 'absolute';
+      host.style.right = host.style.bottom = '';
+      let top: number;
+      let left: number;
+      if (window.innerWidth - r.right > BADGE_W + 16) {
+        // room to the right of the price — sit beside it, vertically centered
+        top = window.scrollY + r.top + Math.max(0, (r.height - BADGE_H) / 2);
+        left = window.scrollX + r.right + 10;
+      } else {
+        // right-aligned buy box (Amazon/H&M) — drop below the price instead
+        top = window.scrollY + r.bottom + 6;
+        left = window.scrollX + r.left;
+      }
+      // never let it run off the right edge
+      left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + window.innerWidth - BADGE_W - 8));
+      host.style.top = `${top}px`;
+      host.style.left = `${left}px`;
+    } else {
+      // No price element on the page — dock in the corner instead.
+      host.style.position = 'fixed';
+      host.style.top = host.style.left = '';
+      host.style.right = '20px';
+      host.style.bottom = '20px';
+    }
+  };
+
+  let raf = 0;
+  const onScrollResize = () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(reposition);
+  };
+  reposition();
+  // Delayed passes catch late-hydrating prices; the interval keeps it pinned.
+  const timers = [300, 900, 1800, 3200].map((d) => window.setTimeout(reposition, d));
+  const interval = window.setInterval(reposition, 2000);
+  window.addEventListener('scroll', onScrollResize, { passive: true });
+  window.addEventListener('resize', onScrollResize, { passive: true });
+
+  badgeCleanup = () => {
+    timers.forEach(clearTimeout);
+    clearInterval(interval);
+    window.removeEventListener('scroll', onScrollResize);
+    window.removeEventListener('resize', onScrollResize);
+    cancelAnimationFrame(raf);
+    root.unmount();
+  };
 }
 
-async function run() {
+async function run(attempt = 0) {
   const settings = await getSettings();
   const product = extractProduct();
-  if (!product) {
-    currentReason = 'no-product';
-    return;
-  }
-  if (product.extractionConfidence < settings.minConfidence) {
-    currentReason = 'low-confidence';
+  if (!product || product.extractionConfidence < settings.minConfidence) {
+    currentReason = !product ? 'no-product' : 'low-confidence';
+    // SPAs (Amazon, H&M) hydrate product data after document_idle — retry a few
+    // times before giving up, so the badge appears once the page is ready.
+    if (attempt < 5 && !currentAnalysis) setTimeout(() => run(attempt + 1), 800);
     return;
   }
 
@@ -95,26 +163,40 @@ async function run() {
   // Tell the service worker so it can badge the toolbar icon.
   chrome.runtime.sendMessage({ type: 'MIQ_VERDICT', verdict: analysis.verdict }).catch(() => {});
 
-  if (settings.showInlineBadge) mountBadge(analysis);
+  if (settings.showInlineBadge) {
+    try {
+      mountBadge(analysis);
+    } catch (err) {
+      console.warn('[MaterialIQ] badge mount failed:', err); // never break the score over the badge
+    }
+  }
 
-  // Enrich with AI-summarized reviews in the background. Re-scores so the
-  // durability signal from reviews is reflected, and updates what the popup sees.
-  void enrichWithReviews(product);
+  // Enrich with AI-summarized reviews only when enabled (off until the AI backend
+  // launches). When off, the extension never contacts the backend.
+  if (settings.reviewSummaries) void enrichWithReviews(product);
 }
 
 async function enrichWithReviews(product: Product) {
   const reviews = extractReviews();
   if (reviews.length === 0) return;
-  const summary = await fetchReviewSummary(product.title, reviews);
+  const summary = await fetchReviewSummary(product.title, reviews, product.url);
   if (!summary) return;
   const enriched = analyze({ ...product, reviews: summary });
   currentAnalysis = enriched;
 }
 
-// Answer the popup's request for the current analysis.
+// Answer the popup/side panel: current analysis, or a fresh re-extraction.
 chrome.runtime.onMessage.addListener((msg: MIQMessage, _sender, sendResponse) => {
   if (msg.type === 'MIQ_GET_ANALYSIS') {
     sendResponse({ type: 'MIQ_ANALYSIS', analysis: currentAnalysis, reason: currentReason } satisfies AnalysisResponse);
+    return true;
+  }
+  if (msg.type === 'MIQ_RECHECK') {
+    removeBadge();
+    currentAnalysis = null;
+    currentReason = undefined;
+    run().then(() => sendResponse({ type: 'MIQ_ANALYSIS', analysis: currentAnalysis, reason: currentReason } satisfies AnalysisResponse));
+    return true; // async response
   }
   return true;
 });
@@ -125,8 +207,9 @@ new MutationObserver(() => {
   if (location.href !== lastUrl) {
     lastUrl = location.href;
     currentAnalysis = null;
-    document.getElementById('miq-badge-host')?.remove();
-    setTimeout(run, 800); // let the SPA hydrate the new PDP
+    currentReason = undefined;
+    removeBadge();
+    setTimeout(() => run(), 800); // let the SPA hydrate the new PDP
   }
 }).observe(document.body, { childList: true, subtree: true });
 

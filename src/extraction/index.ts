@@ -5,15 +5,15 @@
 import type { Product } from '../engine/types';
 import { extractGeneric } from './retailers/generic';
 import { extractUniqlo } from './retailers/uniqlo';
+import { extractHM } from './retailers/hm';
+import { extractAmazon } from './retailers/amazon';
 
 type Adapter = (doc: Document, url: string) => Product | null;
 
 const ADAPTERS: { test: RegExp; extract: Adapter }[] = [
   { test: /(^|\.)uniqlo\.com$/i, extract: extractUniqlo },
-  // H&M and Amazon ship usable JSON-LD/OG tags, so the generic adapter carries
-  // them until they need bespoke selectors.
-  { test: /(^|\.)hm\.com$/i, extract: extractGeneric },
-  { test: /(^|\.)amazon\.com$/i, extract: extractGeneric },
+  { test: /(^|\.)hm\.com$/i, extract: extractHM },
+  { test: /(^|\.)amazon\.com$/i, extract: extractAmazon },
 ];
 
 export function extractProduct(doc: Document = document, url: string = location.href): Product | null {

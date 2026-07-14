@@ -57,19 +57,19 @@ export const FIBER_LABELS: Record<Fiber, string> = {
 /* GSM banding for t-shirts. 180–220 mid-weight scores highest.
    Returns { score 0–10, label }. */
 export function gsmScore(gsm: number): { score: number; label: string } {
-  if (gsm < 120) return { score: 2.5, label: 'very light — likely to be sheer' };
+  if (gsm < 120) return { score: 2.5, label: 'very light, likely to be sheer' };
   if (gsm < 150) return { score: 5, label: 'lightweight' };
   if (gsm < 180) return { score: 8, label: 'light-mid weight' };
-  if (gsm <= 220) return { score: 10, label: 'mid-weight — the sweet spot for tees' };
+  if (gsm <= 220) return { score: 10, label: 'mid-weight, the sweet spot for tees' };
   if (gsm <= 260) return { score: 8.5, label: 'heavyweight' };
   return { score: 7, label: 'very heavy' };
 }
 
 /* Yarn quality contribution to construction. */
 export const YARN_BONUS: Record<YarnType, { bonus: number; label: string }> = {
-  'ring-spun': { bonus: 2, label: 'ring-spun — smoother and more durable than open-end' },
-  combed: { bonus: 2.5, label: 'combed — long fibers removed for strength and softness' },
-  'open-end': { bonus: -1, label: 'open-end yarn — cheaper, coarser, pills sooner' },
+  'ring-spun': { bonus: 2, label: 'ring-spun, smoother and more durable than open-end' },
+  combed: { bonus: 2.5, label: 'combed, long fibers removed for strength and softness' },
+  'open-end': { bonus: -1, label: 'open-end yarn, cheaper, coarser, pills sooner' },
   unknown: { bonus: 0, label: '' },
 };
 

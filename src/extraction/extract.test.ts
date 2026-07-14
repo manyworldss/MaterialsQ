@@ -93,8 +93,89 @@ describe('extractGeneric — markup shapes', () => {
     expect(p.gsm).toBeNull();
   });
 
+  it('reads an Amazon PDP (productTitle + a-offscreen price + detail bullets)', () => {
+    const doc = docFrom(`<html><body>
+      <h1 id="productTitle">Men's Short-Sleeve Crew T-Shirt</h1>
+      <div id="corePrice_feature_div"><span class="a-price"><span class="a-offscreen">$24.99</span></span></div>
+      <div id="detailBullets_feature_div"><ul>
+        <li><span class="a-text-bold">Fabric type</span><span>100% Cotton</span></li>
+        <li><span class="a-text-bold">Care instructions</span><span>Machine Wash</span></li>
+      </ul></div>
+    </body></html>`);
+    const p = extractProduct(doc, 'https://www.amazon.com/dp/B00TESTASIN')!;
+    expect(p.title).toBe("Men's Short-Sleeve Crew T-Shirt");
+    expect(p.price).toBe(24.99);
+    expect(p.composition[0].fiber).toBe('cotton');
+    expect(p.category).toBe('tshirt');
+  });
+
+  it('reads an H&M SPA (og:title + blob price + fiber-first composition)', () => {
+    const blob = '{"product":{"name":"Regular Fit T-shirt","price":{"value":9.99,"currency":"USD"},"composition":"Cotton 60%, Polyester 40%"}}';
+    const doc = docFrom(`<html><head>
+      <meta property="og:title" content="Regular Fit T-shirt | H&M US" />
+      <meta property="product:price:amount" content="9.99" />
+      </head><body><script>window.__INITIAL_STATE__ = ${blob};</script></body></html>`);
+    const p = extractProduct(doc, 'https://www2.hm.com/en_us/productpage.1234567.html')!;
+    expect(p.title).toBe('Regular Fit T-shirt');
+    expect(p.price).toBe(9.99);
+    expect(p.composition.find((c) => c.fiber === 'cotton')?.percent).toBe(60);
+    expect(p.composition.find((c) => c.fiber === 'polyester')?.percent).toBe(40);
+    expect(p.category).toBe('tshirt');
+  });
+
+  it('parseComposition handles fiber-first order', () => {
+    const parts = parseComposition('Cotton 100%');
+    expect(parts).toEqual([{ fiber: 'cotton', percent: 100, raw: 'Cotton 100%' }]);
+  });
+
   it('returns null when there is nothing to score', () => {
     const doc = docFrom('<html><body><h1>About us</h1><p>We sell things.</p></body></html>');
     expect(extractGeneric(doc, 'https://example.com/about')).toBeNull();
+  });
+});
+
+import * as fs from 'fs';
+import * as path from 'path';
+import { extractAmazon } from './retailers/amazon';
+import { extractHM } from './retailers/hm';
+
+describe('Real Retailer Calibrations', () => {
+  it('extracts correctly from the Amazon HTML snapshot', () => {
+    const htmlPath = path.resolve(__dirname, '../../tmp/html files/BYLT Mens Drop-Cut Men\'s T Shirt, Slim Fit Plain Tshirts for Men, Drop Cut Basic Crewneck Tee, Wrinkle Resistant, Stretch Fit – White, XL _ Amazon.com.html');
+    if (!fs.existsSync(htmlPath)) {
+      console.warn('Amazon HTML not found at', htmlPath);
+      return;
+    }
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    const doc = docFrom(html);
+    const p = extractAmazon(doc, 'https://www.amazon.com/dp/B08G9P3XX3');
+    
+    expect(p).not.toBeNull();
+    console.log('Amazon Product:', JSON.stringify(p, null, 2));
+    
+    if (p) {
+      expect(p.title).toContain('BYLT Mens Drop-Cut');
+      expect(p.price).toBeGreaterThan(0);
+      expect(p.composition.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('extracts correctly from the H&M HTML snapshot', () => {
+    const htmlPath = path.resolve(__dirname, '../../tmp/html files/Men’s Dark blue_St. Ives Hotel Relaxed-Fit Printed T-Shirt _ H&M US.html');
+    if (!fs.existsSync(htmlPath)) {
+      console.warn('H&M HTML not found at', htmlPath);
+      return;
+    }
+    const html = fs.readFileSync(htmlPath, 'utf8');
+    const doc = docFrom(html);
+    const p = extractHM(doc, 'https://www2.hm.com/en_us/productpage.12345.html');
+    
+    expect(p).not.toBeNull();
+    
+    if (p) {
+      expect(p.title).toContain('St. Ives Hotel');
+      expect(p.price).toBeGreaterThan(0);
+      expect(p.composition.length).toBeGreaterThan(0);
+    }
   });
 });

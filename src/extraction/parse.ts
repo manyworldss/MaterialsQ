@@ -42,6 +42,16 @@ export function parseComposition(text: string): CompositionPart[] {
     const fiber = matchFiber(m[2]);
     if (fiber && percent > 0 && percent <= 100) parts.push({ fiber, percent, raw: m[0].trim() });
   }
+  // Fiber-first order ("Cotton 60%, Polyester 40%"), common on H&M / EU sites.
+  if (!parts.length) {
+    const reB = /([A-Za-z][A-Za-z\s\-]{1,24}?)\s*(\d{1,3})\s*%/g;
+    let mb: RegExpExecArray | null;
+    while ((mb = reB.exec(text)) !== null) {
+      const fiber = matchFiber(mb[1]);
+      const percent = parseInt(mb[2], 10);
+      if (fiber && percent > 0 && percent <= 100) parts.push({ fiber, percent, raw: mb[0].trim() });
+    }
+  }
   // Fallback: a bare fiber name with no percentage ("Cotton") → assume 100%.
   if (!parts.length) {
     const fiber = matchFiber(text);

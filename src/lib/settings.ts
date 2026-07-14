@@ -7,12 +7,16 @@ export interface Settings {
   minConfidence: number;
   /** Suggest a cheaper alternative when the verdict isn't "worth it". */
   showAlternatives: boolean;
+  /** AI review summaries. OFF until the AI backend goes live at launch — when
+   *  false the extension never contacts the backend and scores fully locally. */
+  reviewSummaries: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
   showInlineBadge: true,
   minConfidence: 0.5,
   showAlternatives: true,
+  reviewSummaries: false,
 };
 
 const KEY = 'miq_settings';

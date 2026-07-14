@@ -14,7 +14,18 @@ import {
   YARN_BONUS,
   gsmScore,
 } from './rubric';
-import { findAlternative, marketReference } from './comparables';
+import { betterOptions, findAlternative, marketReference } from './comparables';
+
+// Rough wears-per-year by category — for cost-per-wear. A tee gets worn ~weekly
+// in rotation; knitwear less often.
+const WEARS_PER_YEAR: Record<string, number> = { tshirt: 40, knit: 25, unknown: 30 };
+
+function computeCostPerWear(product: Product, stars: number) {
+  if (product.price == null || product.price <= 0) return null;
+  const years = stars >= 4.2 ? 5 : stars >= 3.2 ? 4 : stars >= 2.2 ? 2 : 1;
+  const wears = Math.max(1, Math.round(years * (WEARS_PER_YEAR[product.category] ?? 30)));
+  return { perWear: product.price / wears, wears, years };
+}
 
 const clamp = (n: number, lo = 0, hi = 10) => Math.max(lo, Math.min(hi, n));
 const round1 = (n: number) => Math.round(n * 10) / 10;
@@ -41,7 +52,7 @@ function scoreMaterials(product: Product): FactorScore {
 function scoreFabricWeight(product: Product): FactorScore | null {
   if (product.gsm == null) return null;
   const { score, label } = gsmScore(product.gsm);
-  return { key: 'fabricWeight', label: 'Fabric weight', value: round1(score / 2), max: 5, detail: `${product.gsm} GSM — ${label}`, estimated: false };
+  return { key: 'fabricWeight', label: 'Fabric weight', value: round1(score / 2), max: 5, detail: `${product.gsm} GSM · ${label}`, estimated: false };
 }
 
 function scoreConstruction(product: Product): FactorScore {
@@ -53,7 +64,7 @@ function scoreConstruction(product: Product): FactorScore {
   if (yarn.label) bits.push(yarn.label);
   cues.forEach((c) => bits.push(c.label));
   const estimated = product.yarn === 'unknown' && cues.length === 0;
-  const detail = bits.length ? bits.join('; ') : 'No construction details on the page — estimated from fiber';
+  const detail = bits.length ? bits.join('; ') : 'No construction details on the page, estimated from fiber';
   return { key: 'construction', label: 'Construction', value: round1(value), max: 10, detail, estimated };
 }
 
@@ -131,9 +142,36 @@ function writeCopy(
   if (verdict === 'skip') {
     if (value.value < 3.5) return `You're paying for the label, not the cloth. At ${priceTxt}, skip this one.`;
     if (materials.value <= 4) return `Cheap fibers that'll pill and fade fast. Skip this one.`;
-    return `Nothing here justifies ${priceTxt}. Skip it — the alternative below is the smarter buy.`;
+    return `Nothing here justifies ${priceTxt}. Skip it. The alternative below is the smarter buy.`;
   }
-  return `Fine, not special. ${fiberTxt} at ${priceTxt} is about what you'd expect — no bargain, no rip-off.`;
+  return `Fine, not special. ${fiberTxt} at ${priceTxt} is about what you'd expect. No bargain, no rip-off.`;
+}
+
+/* ---- Red Flags & Care Tips ---- */
+
+function computeFlags(product: Product): { text: string; type: 'warning' | 'info' }[] {
+  const flags: { text: string; type: 'warning' | 'info' }[] = [];
+  const p = product.composition.reduce((acc, curr) => {
+    acc[curr.fiber] = (acc[curr.fiber] || 0) + curr.percent;
+    return acc;
+  }, {} as Record<string, number>);
+
+  if ((p['acrylic'] ?? 0) > 15) {
+    flags.push({ text: 'High pilling risk: acrylic sheds and pills quickly', type: 'warning' });
+  }
+  if ((p['polyester'] ?? 0) > 40) {
+    flags.push({ text: 'Low breathability, retains odors', type: 'warning' });
+  }
+  if ((p['viscose'] ?? 0) > 0 || (p['rayon'] ?? 0) > 0) {
+    flags.push({ text: 'Prone to shrinking and losing shape if washed hot', type: 'warning' });
+  }
+  if ((p['silk'] ?? 0) > 0 || (p['cashmere'] ?? 0) > 0) {
+    flags.push({ text: 'Requires dry cleaning or careful hand-washing', type: 'info' });
+  }
+  if ((p['linen'] ?? 0) > 0) {
+    flags.push({ text: 'Prone to heavy wrinkling', type: 'info' });
+  }
+  return flags;
 }
 
 /* ---- Compose ---- */
@@ -162,6 +200,9 @@ export function analyze(product: Product): Analysis {
   const { stars, caption } = computeDurability(product, construction, materials);
   const verdictCopy = writeCopy(product, verdict, materials, value, discountPct);
   const alternative = verdict === 'worth' ? null : findAlternative(product.category, qualityScore, product.price);
+  const options = betterOptions(product.category, qualityScore, product.price, product.title);
+  const costPerWear = computeCostPerWear(product, stars);
+  const careAndFlags = computeFlags(product);
 
   const factors: FactorScore[] = [materials, ...(fabricWeight ? [fabricWeight] : []), construction, value];
 
@@ -176,6 +217,9 @@ export function analyze(product: Product): Analysis {
     durabilityCaption: caption,
     verdictCopy,
     alternative,
+    betterOptions: options,
+    costPerWear,
+    careAndFlags,
     rubricVersion: RUBRIC_VERSION,
     analyzedMs: Math.max(1, Math.round(performance.now() - t0)),
   };

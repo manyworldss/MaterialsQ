@@ -5,26 +5,27 @@ import pkg from '../package.json';
 // Host permissions are scoped to the beta retailers only — we do not read arbitrary sites.
 // Add a retailer: append its origin here AND register an adapter in src/extraction/retailers.
 export const RETAILER_ORIGINS = [
-  'https://www.uniqlo.com/*',
-  'https://www2.hm.com/*',
-  'https://www.amazon.com/*',
+  '*://*/*'
 ];
 
 export default defineManifest({
   manifest_version: 3,
-  name: 'MaterialIQ — is it worth the price?',
+  name: 'MaterialIQ: is it worth the price?',
   version: pkg.version,
   description: pkg.description,
   action: {
     default_popup: 'src/popup/index.html',
     default_title: 'MaterialIQ',
   },
+  side_panel: {
+    default_path: 'src/sidepanel/index.html',
+  },
   options_page: 'src/options/index.html',
   background: {
     service_worker: 'src/background/service-worker.ts',
     type: 'module',
   },
-  permissions: ['storage', 'activeTab', 'scripting'],
+  permissions: ['storage', 'activeTab', 'scripting', 'sidePanel'],
   host_permissions: RETAILER_ORIGINS,
   content_scripts: [
     {

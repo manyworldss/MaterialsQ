@@ -8,3 +8,5 @@ dist
 .env
 **/.env
 server/waitlist.jsonl
+server/summary-cache.json
+server/summary-cache.json.tmp

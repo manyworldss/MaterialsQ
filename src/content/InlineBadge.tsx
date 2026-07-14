@@ -1,20 +1,15 @@
-/* The injected badge — ALWAYS dark, floating on the retailer's light page.
-   Driven by a real Analysis. Ported from the design system's inline_badge kit. */
+/* The injected badge — ALWAYS ink-dark, pinned to the retailer's light page.
+   Opens a frosted-glass mini-card. New cream/azure/ink design system. */
 
 import { useState } from 'react';
 import type { Analysis } from '../engine/types';
 import { ScoreBar, VerdictPill } from '../design-system/scores';
 
-const verdictColor: Record<string, string> = {
-  worth: 'var(--score-high)',
-  fair: 'var(--accent-bright)',
-  skip: 'var(--score-low)',
-};
-const verdictShort: Record<string, string> = { worth: 'Worth it', fair: 'Fair price', skip: 'Skip it' };
+const VERDICT_DOT: Record<string, string> = { worth: 'var(--score-high)', fair: 'var(--fg-inverse-2)', skip: 'var(--score-low)' };
+const VERDICT_SHORT: Record<string, string> = { worth: 'Worth it', fair: 'Fair price', skip: 'Skip it' };
 
 export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl: string }) {
   const [open, setOpen] = useState(false);
-  const dot = verdictColor[analysis.verdict];
   const top = analysis.factors.filter((f) => f.key !== 'value').slice(0, 3);
 
   return (
@@ -27,22 +22,22 @@ export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl
           gap: 8,
           height: 30,
           padding: '0 12px',
-          background: 'var(--bg-0)',
-          color: 'var(--fg-1)',
-          border: '1px solid rgba(139,92,246,0.5)',
-          borderRadius: 999,
+          background: 'var(--ink-0)',
+          color: 'var(--fg-inverse)',
+          border: '1px solid ' + (open ? 'var(--accent)' : 'var(--ink-0)'),
+          borderRadius: 'var(--radius-sm)',
           cursor: 'pointer',
           fontFamily: 'var(--font-sans)',
           fontSize: 12,
           fontWeight: 700,
-          boxShadow: open ? 'var(--glow-accent)' : '0 2px 8px rgba(0,0,0,0.18)',
+          boxShadow: '0 2px 8px rgba(22,24,26,0.18)',
           transition: 'var(--transition-ui)',
         }}
       >
-        <span style={{ width: 7, height: 7, borderRadius: '50%', background: dot, boxShadow: `0 0 8px ${dot}` }} />
+        <span style={{ width: 7, height: 7, borderRadius: '50%', background: VERDICT_DOT[analysis.verdict] }} />
         <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>{analysis.overall.toFixed(1)}</span>
-        <span style={{ color: 'var(--fg-2)', fontWeight: 500 }}>{verdictShort[analysis.verdict]}</span>
-        <span style={{ color: 'var(--accent-bright)', fontWeight: 800, letterSpacing: '-0.01em' }}>IQ</span>
+        <span style={{ color: 'var(--fg-inverse-2)', fontWeight: 500 }}>{VERDICT_SHORT[analysis.verdict]}</span>
+        <span style={{ color: 'var(--accent-bright)', fontFamily: 'var(--font-display)', fontStretch: '125%', fontWeight: 800 }}>IQ</span>
       </button>
 
       {open && (
@@ -53,18 +48,20 @@ export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl
             left: 0,
             width: 300,
             zIndex: 2147483647,
-            background: 'var(--bg-0)',
-            border: '1px solid var(--border-2)',
-            borderRadius: 'var(--radius-lg)',
-            boxShadow: 'var(--shadow-pop)',
+            background: 'var(--glass-fill-strong)',
+            backdropFilter: 'blur(var(--glass-blur)) saturate(1.15)',
+            WebkitBackdropFilter: 'blur(var(--glass-blur)) saturate(1.15)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-glass)',
             padding: 16,
             color: 'var(--fg-1)',
             textAlign: 'left',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <span style={{ fontWeight: 800, fontSize: 13 }}>
-              Material<span style={{ color: 'var(--accent-bright)' }}>IQ</span>
+            <span style={{ fontFamily: 'var(--font-display)', fontStretch: '125%', fontWeight: 800, fontSize: 13, textTransform: 'uppercase' }}>
+              Material<span style={{ color: 'var(--accent)' }}>IQ</span>
             </span>
             <VerdictPill verdict={analysis.verdict} />
           </div>
@@ -74,13 +71,8 @@ export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl
               <ScoreBar key={f.key} label={f.label} value={f.value} max={f.max} />
             ))}
           </div>
-          <a
-            href={docsUrl}
-            target="_blank"
-            rel="noreferrer"
-            style={{ display: 'block', fontSize: 12, marginTop: 12, color: 'var(--accent-bright)' }}
-          >
-            How we score →
+          <a href={docsUrl} target="_blank" rel="noreferrer" style={{ display: 'block', fontSize: 12, marginTop: 12, color: 'var(--accent)' }}>
+            Open full scorecard →
           </a>
         </div>
       )}
