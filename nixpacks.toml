@@ -10,7 +10,10 @@ nixPkgs = ["nodejs_20"]
 [phases.install]
 # --include=dev because the build needs vite/tsc (web devDeps); Railway installs
 # with NODE_ENV=production otherwise, which would skip them.
+# Root deps first: the web build's tsc type-checks the shared src/ files (@ds, @engine),
+# which resolve `react`/`@types/react` from the repo-root node_modules.
 cmds = [
+  "npm install --include=dev",
   "npm --prefix server install --include=dev",
   "npm --prefix web install --include=dev",
 ]
