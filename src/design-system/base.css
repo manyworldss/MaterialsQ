@@ -12,6 +12,11 @@ body {
   line-height: var(--leading-body);
   letter-spacing: var(--tracking-body);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+html {
+  overflow-x: hidden;
 }
 
 a { color: var(--text-link); text-decoration: none; transition: var(--transition-ui); }

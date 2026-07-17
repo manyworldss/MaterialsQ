@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Privacy Policy — MaterialIQ</title>
+  <meta name="robots" content="index,follow" />
+  <style>
+    :root {
+      --cream: #F2EFE9;
+      --ink: #16181A;
+      --azure: #0077E6;
+      --muted: #565A5E;
+      --line: #DAD6CD;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--cream);
+      color: var(--ink);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+    .kicker {
+      font: 600 12px/1 ui-monospace, "IBM Plex Mono", Menlo, monospace;
+      letter-spacing: 0.14em; text-transform: uppercase; color: var(--azure);
+    }
+    h1 { font-size: 40px; line-height: 1.05; letter-spacing: -0.02em; margin: 14px 0 8px; }
+    .updated { color: var(--muted); font-size: 14px; margin-bottom: 40px; }
+    h2 { font-size: 20px; letter-spacing: -0.01em; margin: 40px 0 10px; }
+    p, li { color: #23262A; }
+    a { color: var(--azure); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul { padding-left: 20px; }
+    li { margin: 6px 0; }
+    .card {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      padding: 20px 22px; margin: 20px 0;
+    }
+    .foot { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+    strong { color: var(--ink); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="kicker">MaterialIQ</div>
+    <h1>Privacy Policy</h1>
+    <div class="updated">Last updated: July 15, 2026</div>
+
+    <p>
+      MaterialIQ is a browser extension that reads the product page you are currently viewing
+      and shows you a value score based on material quality, construction, and comparable pricing.
+      We built it to respect your privacy. This policy explains exactly what the extension does
+      and does not do with data.
+    </p>
+
+    <div class="card">
+      <strong>The short version:</strong> MaterialIQ does its scoring on your own device.
+      By default it sends nothing to any server, shows no ads, and does not track you, sell
+      your data, or build a profile of you.
+    </div>
+
+    <h2>What the extension reads</h2>
+    <p>
+      When you open a supported product page, MaterialIQ reads publicly visible details from that
+      page in order to score it, such as:
+    </p>
+    <ul>
+      <li>Product title and description</li>
+      <li>Listed price</li>
+      <li>Material composition (for example, "100% cotton")</li>
+      <li>Publicly shown product reviews on the page</li>
+    </ul>
+    <p>
+      This reading happens locally in your browser. The extension does not read passwords,
+      payment information, form inputs, or any content unrelated to scoring the product.
+    </p>
+
+    <h2>What is stored</h2>
+    <p>
+      Your settings (such as whether optional AI review summaries are enabled) are saved locally
+      using the browser's <strong>storage</strong> API. This data stays in your browser and is not
+      transmitted to us.
+    </p>
+
+    <h2>Optional AI review summaries</h2>
+    <p>
+      MaterialIQ includes an <strong>off-by-default</strong> feature that can summarize a product's
+      reviews using AI. If — and only if — you turn this on in the extension's settings, the
+      extension sends the product URL and publicly visible review text to the MaterialIQ backend,
+      which uses a third-party AI provider (Anthropic) to generate a short summary. This request
+      contains no personal identifiers, no account information, and no browsing history. If you
+      leave this feature off, no data ever leaves your device.
+    </p>
+
+    <h2>What we do NOT do</h2>
+    <ul>
+      <li>We do not sell or rent your data to anyone.</li>
+      <li>We do not use your data for advertising.</li>
+      <li>We do not track your browsing across sites.</li>
+      <li>We do not collect names, emails, or account credentials.</li>
+    </ul>
+
+    <h2>Permissions, briefly</h2>
+    <ul>
+      <li><strong>storage</strong> — save your settings locally.</li>
+      <li><strong>activeTab / scripting</strong> — read the product page you are viewing so it can be scored.</li>
+      <li><strong>sidePanel</strong> — show the score in Chrome's side panel.</li>
+      <li><strong>Host access</strong> — run on shopping pages so the score can appear where you shop.</li>
+    </ul>
+
+    <h2>Changes to this policy</h2>
+    <p>
+      If we change how the extension handles data, we will update this page and the "last updated"
+      date above.
+    </p>
+
+    <h2>Contact</h2>
+    <p>
+      Questions about privacy? Email <a href="mailto:Ralphsuber@gmail.com">Ralphsuber@gmail.com</a>.
+    </p>
+
+    <div class="foot">
+      MaterialIQ &middot; This policy applies to the MaterialIQ browser extension.
+    </div>
+  </main>
+</body>
+</html>

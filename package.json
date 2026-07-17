@@ -1,7 +1,7 @@
 {
   "name": "materialiq-extension",
-  "version": "0.1.0",
-  "description": "MaterialIQ — tells shoppers whether a product is actually worth its price, from material composition, construction, and comparable pricing.",
+  "version": "1.0.0",
+  "description": "See if a product is worth its price, judged on material quality, construction, and comparable pricing. No hype, just the numbers.",
   "private": true,
   "type": "module",
   "scripts": {
