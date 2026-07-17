@@ -72,30 +72,30 @@ function Hero({ onCta }: { onCta: () => void }) {
   return (
     <header className="hero-grid" style={{ maxWidth: PAGE, margin: '0 auto', padding: 'clamp(56px, 8vw, 88px) clamp(20px, 4vw, 40px) 72px', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center' }}>
       <div>
-        <Reveal><div style={{ ...eyebrow, marginBottom: 20 }}>Free browser extension · Beta</div></Reveal>
-        <Reveal delay={0.06}>
+        <Reveal onMount><div style={{ ...eyebrow, marginBottom: 20 }}>Free browser extension · Beta</div></Reveal>
+        <Reveal delay={0.06} onMount>
           <h1 style={{ ...displayType, fontSize: 'clamp(44px, 8vw, 76px)', margin: 0 }}>
             Know what
             <br />
             it's <span style={{ color: 'var(--accent)' }}>worth.</span>
           </h1>
         </Reveal>
-        <Reveal delay={0.12}>
+        <Reveal delay={0.12} onMount>
           <p style={{ fontSize: 'var(--text-lg)', color: 'var(--fg-2)', maxWidth: 480, margin: '24px 0 32px', lineHeight: 1.55 }}>
             MaterialIQ reads the fabric, the stitching, and the price, then tells you if a product deserves your money. Before you buy, not after.
           </p>
         </Reveal>
-        <Reveal delay={0.18}>
+        <Reveal delay={0.18} onMount>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <Button size="lg" onClick={onCta}>Add to Chrome, free</Button>
             <Button size="lg" variant="secondary" onClick={() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' })}>See the methodology</Button>
           </div>
         </Reveal>
-        <Reveal delay={0.24}>
+        <Reveal delay={0.24} onMount>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-3)', marginTop: 16 }}>No account. No tracking. Scores you can audit.</div>
         </Reveal>
       </div>
-      <Reveal delay={0.16}>
+      <Reveal delay={0.16} onMount>
         <div style={{ display: 'flex', justifyContent: 'center', position: 'relative' }}>
           <HangTag label="WORTH THE PRICE?" value={8.7} verdict="Worth it" size="lg" countUp details={[{ k: 'FIBER', v: '100% cotton' }, { k: 'WEIGHT', v: '185 GSM' }, { k: 'ASKING', v: '$29.90' }, { k: 'COMPARABLE', v: '$32–48' }]} style={{ transform: 'rotate(3deg)' }} />
           <HangTag label="MATERIAL QUALITY" value={3.1} verdict="Skip this one" details={[{ k: 'FIBER', v: '100% acrylic' }, { k: 'ASKING', v: '$89.00' }]} style={{ transform: 'rotate(-5deg) translate(-24px, 48px)', zIndex: -1 }} />
