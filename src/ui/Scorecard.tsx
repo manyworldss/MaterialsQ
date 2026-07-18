@@ -140,6 +140,24 @@ export function Scorecard({
         </div>
 
         <p style={{ margin: '12px 0 0', fontSize: 'var(--text-sm)', color: 'var(--fg-2)', lineHeight: 1.5 }}>{analysis.verdictCopy}</p>
+
+        {/* Category context — how the use-case shaped the grade (Objective 2). */}
+        {analysis.categoryContext.useCase !== 'unknown' && (
+          <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ display: 'flex', marginTop: 1, flexShrink: 0, color: analysis.categoryContext.appropriate ? 'var(--score-high)' : 'var(--score-low)' }}>
+              {analysis.categoryContext.appropriate ? <Check size={14} /> : <AlertTriangle size={14} />}
+            </span>
+            <div>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', color: 'var(--fg-1)' }}>
+                Graded as {analysis.categoryContext.label}
+              </span>
+              {analysis.categoryContext.materialNote && (
+                <p style={{ margin: '3px 0 0', fontSize: 'var(--text-xs)', color: 'var(--fg-2)', lineHeight: 1.5 }}>{analysis.categoryContext.materialNote}</p>
+              )}
+            </div>
+          </div>
+        )}
+
         {cpw && (
           <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-2)' }}>
             ≈ ${cpw.perWear.toFixed(2)} / wear · ~{cpw.wears} wears over ~{cpw.years} yrs

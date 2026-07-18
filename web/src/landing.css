@@ -33,6 +33,13 @@ html.lenis, html.lenis body { height: auto; }
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
 }
+/* Text + scorecard split ("This is the real thing"). Columns live here, not
+   inline, so the mobile breakpoint can collapse them — an inline
+   grid-template-columns would out-specify the media query and the text column
+   would render at 0px on phones. */
+.split-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 420px);
+}
 .nav-links {
   display: flex;
   gap: 28px;
@@ -47,6 +54,9 @@ html.lenis, html.lenis body { height: auto; }
     display: flex;
     flex-direction: column;
     align-items: center;
+  }
+  .split-grid {
+    grid-template-columns: 1fr;
   }
   .nav-links {
     gap: 12px;

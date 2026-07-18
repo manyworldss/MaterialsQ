@@ -150,7 +150,7 @@ function LiveDemo() {
   );
   return (
     <section style={{ background: 'var(--bg-1)', borderTop: '1px solid var(--border-1)', borderBottom: '1px solid var(--border-1)' }}>
-      <div style={{ maxWidth: PAGE, margin: '0 auto', padding: 'clamp(56px, 8vw, 88px) clamp(20px, 4vw, 40px)', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 420px)', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center' }}>
+      <div className="split-grid" style={{ maxWidth: PAGE, margin: '0 auto', padding: 'clamp(56px, 8vw, 88px) clamp(20px, 4vw, 40px)', display: 'grid', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center' }}>
         <Reveal>
           <div>
             <div style={{ ...eyebrow, marginBottom: 16 }}>Try it</div>

@@ -66,6 +66,33 @@ export interface Product {
 
 export type Verdict = 'worth' | 'fair' | 'skip';
 
+/** The garment's use-case — richer than `Product.category`. Determines which
+    scoring profile (fiber adjustments, weights, price model) the engine applies,
+    so the same fiber is judged by what the garment is FOR. */
+export type UseCase =
+  | 'everyday-tee'
+  | 'activewear'
+  | 'luxury-knit'
+  | 'everyday-knit'
+  | 'unknown';
+
+/** Plain-English framing of how the garment was judged, surfaced in the UI.
+    `materialNote` is the "while synthetic, it's the right fabric here" line. */
+export interface CategoryContext {
+  useCase: UseCase;
+  /** Short display label, e.g. "Activewear". */
+  label: string;
+  /** One line on what this use-case is graded for. */
+  blurb: string;
+  /** Whether the primary material suits this use-case — drives copy + UI tone. */
+  appropriate: boolean;
+  /** The material-fit explanation, generated deterministically from the profile. */
+  materialNote: string;
+  /** True when the use-case was chosen by AI rather than the rule classifier.
+      Rules today; the AI layer sets this so the UI can label it. */
+  aiClassified: boolean;
+}
+
 export interface FactorScore {
   key: string;
   label: string;
@@ -107,6 +134,10 @@ export interface Analysis {
   /** The headline "Worth the price?" number, 0–10. */
   overall: number;
   verdict: Verdict;
+  /** The use-case the garment was scored as. */
+  useCase: UseCase;
+  /** How the use-case shaped the grade, for display. */
+  categoryContext: CategoryContext;
   qualityScore: number;
   valueScore: number;
   factors: FactorScore[];

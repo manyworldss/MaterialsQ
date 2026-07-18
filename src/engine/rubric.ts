@@ -4,7 +4,7 @@
 
 import type { Fiber, YarnType } from './types';
 
-export const RUBRIC_VERSION = 'tees-v1.0.0';
+export const RUBRIC_VERSION = 'v1.1.0-usecase';
 
 /* Per-fiber base quality, 0–10. Straight from the methodology material-score table. */
 export const FIBER_SCORES: Record<Fiber, number> = {

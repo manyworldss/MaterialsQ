@@ -42,6 +42,25 @@ export const SAMPLE_KNIT: Product = {
   notes: ['Fabric weight (GSM) not published for knitwear'],
 };
 
+export const SAMPLE_ACTIVEWEAR: Product = {
+  title: 'Ultra Performance Running Tee',
+  retailer: 'www.example-sport.com',
+  url: 'https://example.com/p/run-tee',
+  price: 34.9,
+  currency: 'USD',
+  category: 'tshirt',
+  composition: [
+    { fiber: 'polyester', percent: 88, raw: '88% Polyester' },
+    { fiber: 'elastane', percent: 12, raw: '12% Elastane' },
+  ],
+  gsm: 140,
+  yarn: 'unknown',
+  origin: null,
+  constructionSignals: ['Flatlock seams'],
+  extractionConfidence: 0.85,
+  notes: [],
+};
+
 export const SAMPLE_BAD_TEE: Product = {
   title: 'Fashion Logo Tee',
   retailer: 'www.example-fastfashion.com',

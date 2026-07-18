@@ -5,25 +5,25 @@ import type { Analysis, FactorScore, Product, Verdict } from './types';
 import {
   CONSTRUCTION_CUES,
   FIBER_LABELS,
-  FIBER_SCORES,
   OVERALL_WEIGHTS,
-  PRICE_MODEL,
-  QUALITY_WEIGHTS,
   RUBRIC_VERSION,
   VERDICT_THRESHOLDS,
   YARN_BONUS,
   gsmScore,
 } from './rubric';
+import {
+  buildCategoryContext,
+  detectUseCase,
+  effectiveFiberScore,
+  profileFor,
+  type ScoringProfile,
+} from './profiles';
 import { betterOptions, findAlternative, marketReference } from './comparables';
 
-// Rough wears-per-year by category — for cost-per-wear. A tee gets worn ~weekly
-// in rotation; knitwear less often.
-const WEARS_PER_YEAR: Record<string, number> = { tshirt: 40, knit: 25, unknown: 30 };
-
-function computeCostPerWear(product: Product, stars: number) {
+function computeCostPerWear(product: Product, stars: number, profile: ScoringProfile) {
   if (product.price == null || product.price <= 0) return null;
   const years = stars >= 4.2 ? 5 : stars >= 3.2 ? 4 : stars >= 2.2 ? 2 : 1;
-  const wears = Math.max(1, Math.round(years * (WEARS_PER_YEAR[product.category] ?? 30)));
+  const wears = Math.max(1, Math.round(years * profile.wearsPerYear));
   return { perWear: product.price / wears, wears, years };
 }
 
@@ -32,25 +32,28 @@ const round1 = (n: number) => Math.round(n * 10) / 10;
 
 /* ---- Individual factor scorers ---- */
 
-function scoreMaterials(product: Product): FactorScore {
+function scoreMaterials(product: Product, profile: ScoringProfile): FactorScore {
   const parts = product.composition.filter((p) => p.percent > 0);
   if (!parts.length) {
     return { key: 'materials', label: 'Materials', value: 5, max: 10, detail: 'Fiber content not listed on the page', estimated: true };
   }
   const total = parts.reduce((s, p) => s + p.percent, 0) || 100;
-  const weighted = parts.reduce((s, p) => s + FIBER_SCORES[p.fiber] * (p.percent / total), 0);
-  const primary = [...parts].sort((a, b) => b.percent - a.percent)[0];
+  // Use-case-adjusted fiber scores: polyester is graded up for activewear, down
+  // for fine knitwear, etc. Same fibers, judged by what the garment is for.
+  const weighted = parts.reduce((s, p) => s + effectiveFiberScore(p.fiber, profile) * (p.percent / total), 0);
   const detail = parts
     .sort((a, b) => b.percent - a.percent)
     .map((p) => `${Math.round(p.percent)}% ${FIBER_LABELS[p.fiber]}`)
     .join(', ');
   const estimated = parts.some((p) => p.fiber === 'unknown');
-  void primary;
   return { key: 'materials', label: 'Materials', value: round1(clamp(weighted)), max: 10, detail, estimated };
 }
 
-function scoreFabricWeight(product: Product): FactorScore | null {
-  if (product.gsm == null) return null;
+function scoreFabricWeight(product: Product, profile: ScoringProfile): FactorScore | null {
+  // GSM is only a quality signal where fabric weight tracks quality (everyday tees).
+  // For knits and performance wear it's noise, so it's dropped and its weight is
+  // redistributed onto materials + construction.
+  if (product.gsm == null || !profile.gsmMeaningful) return null;
   const { score, label } = gsmScore(product.gsm);
   return { key: 'fabricWeight', label: 'Fabric weight', value: round1(score / 2), max: 5, detail: `${product.gsm} GSM · ${label}`, estimated: false };
 }
@@ -70,7 +73,7 @@ function scoreConstruction(product: Product): FactorScore {
 
 /* ---- Value ---- */
 
-function computeValue(product: Product, qualityScore: number): { factor: FactorScore; reference: number | null; discountPct: number } {
+function computeValue(product: Product, qualityScore: number, profile: ScoringProfile): { factor: FactorScore; reference: number | null; discountPct: number } {
   if (product.price == null || product.price <= 0) {
     return {
       factor: { key: 'value', label: 'Value', value: 5, max: 10, detail: 'No price found on the page', estimated: true },
@@ -78,9 +81,8 @@ function computeValue(product: Product, qualityScore: number): { factor: FactorS
       discountPct: 0,
     };
   }
-  const market = marketReference(product.category, qualityScore);
-  const model = PRICE_MODEL[product.category] ?? PRICE_MODEL.unknown;
-  const modelPrice = model.base + model.perPoint * qualityScore;
+  const market = marketReference(profile.comparableCategory, qualityScore);
+  const modelPrice = profile.price.base + profile.price.perPoint * qualityScore;
   // Reference = the fair-price-for-quality model, averaged with same-quality
   // market comparables when we have them. Both signals, neither alone.
   const reference = market != null ? (modelPrice + market) / 2 : modelPrice;
@@ -91,7 +93,7 @@ function computeValue(product: Product, qualityScore: number): { factor: FactorS
   const value = clamp(5 + discountPct * 22 + (qualityScore - 6) * 0.3);
   const cmp =
     market != null
-      ? `Comparable ${product.category === 'knit' ? 'knits' : 'tees'} run around $${market.toFixed(0)}`
+      ? `Comparable ${profile.comparableCategory === 'knit' ? 'knits' : 'tees'} run around $${market.toFixed(0)}`
       : `Fair price for this quality is about $${modelPrice.toFixed(0)}`;
   const pctTxt =
     discountPct >= 0.03
@@ -178,12 +180,17 @@ function computeFlags(product: Product): { text: string; type: 'warning' | 'info
 
 export function analyze(product: Product): Analysis {
   const t0 = performance.now();
-  const materials = scoreMaterials(product);
-  const fabricWeight = scoreFabricWeight(product);
+  // Classify the use-case first, then grade the garment by what it's FOR.
+  const useCase = detectUseCase(product);
+  const profile = profileFor(useCase);
+
+  const materials = scoreMaterials(product, profile);
+  const fabricWeight = scoreFabricWeight(product, profile);
   const construction = scoreConstruction(product);
 
-  // Quality composite. Redistribute the fabric-weight weight when GSM is missing.
-  const w = { ...QUALITY_WEIGHTS };
+  // Quality composite. Redistribute the fabric-weight weight when GSM is missing
+  // or not meaningful for this use-case.
+  const w = profile.weights;
   let qualityScore: number;
   if (fabricWeight) {
     qualityScore =
@@ -194,15 +201,16 @@ export function analyze(product: Product): Analysis {
   }
   qualityScore = round1(clamp(qualityScore));
 
-  const { factor: value, discountPct } = computeValue(product, qualityScore);
+  const { factor: value, discountPct } = computeValue(product, qualityScore, profile);
   const overall = round1(clamp(qualityScore * OVERALL_WEIGHTS.quality + value.value * OVERALL_WEIGHTS.value));
   const verdict = decideVerdict(overall, value.value);
   const { stars, caption } = computeDurability(product, construction, materials);
   const verdictCopy = writeCopy(product, verdict, materials, value, discountPct);
-  const alternative = verdict === 'worth' ? null : findAlternative(product.category, qualityScore, product.price);
-  const options = betterOptions(product.category, qualityScore, product.price, product.title);
-  const costPerWear = computeCostPerWear(product, stars);
+  const alternative = verdict === 'worth' ? null : findAlternative(profile.comparableCategory, qualityScore, product.price);
+  const options = betterOptions(profile.comparableCategory, qualityScore, product.price, product.title);
+  const costPerWear = computeCostPerWear(product, stars, profile);
   const careAndFlags = computeFlags(product);
+  const categoryContext = buildCategoryContext(product, profile);
 
   const factors: FactorScore[] = [materials, ...(fabricWeight ? [fabricWeight] : []), construction, value];
 
@@ -210,6 +218,8 @@ export function analyze(product: Product): Analysis {
     product,
     overall,
     verdict,
+    useCase,
+    categoryContext,
     qualityScore,
     valueScore: value.value,
     factors,
