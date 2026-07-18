@@ -31,6 +31,10 @@ export interface ScoringProfile {
   wearsPerYear: number;
   /** Fair-price model: base + perPoint × qualityScore. */
   price: { base: number; perPoint: number };
+  /** Substance-price model: what a no-name maker of the SAME material and make
+      would charge for this quality. The gap between asking price and this is the
+      "brand premium". Deliberately lower than `price` (which is fair market). */
+  substancePrice: { base: number; perPoint: number };
   /** Which comparables bucket this maps to (the seed index is coarser). */
   comparableCategory: 'tshirt' | 'knit' | 'unknown';
 }
@@ -55,6 +59,8 @@ export const PROFILES: Record<UseCase, ScoringProfile> = {
     poorFibers: ['polyester', 'acrylic'],
     wearsPerYear: 40,
     price: PRICE_MODEL.tshirt,
+    // A no-logo quality tee (Uniqlo/blank tier): quality 9 ≈ $21.
+    substancePrice: { base: 5, perPoint: 1.8 },
     comparableCategory: 'tshirt',
   },
   activewear: {
@@ -81,6 +87,8 @@ export const PROFILES: Record<UseCase, ScoringProfile> = {
     poorFibers: ['cotton', 'combed-cotton', 'organic-cotton', 'pima-cotton', 'linen'],
     wearsPerYear: 50,
     price: { base: 8, perPoint: 4 },
+    // Generic technical tee: quality 9 ≈ $28. Performance branding runs a big premium.
+    substancePrice: { base: 5, perPoint: 2.6 },
     comparableCategory: 'tshirt',
   },
   'luxury-knit': {
@@ -101,6 +109,8 @@ export const PROFILES: Record<UseCase, ScoringProfile> = {
     poorFibers: ['acrylic', 'polyester'],
     wearsPerYear: 25,
     price: PRICE_MODEL.knit,
+    // No-name knit of the same fiber: quality 9 ≈ $84. Designer labels multiply it.
+    substancePrice: { base: 12, perPoint: 8 },
     comparableCategory: 'knit',
   },
   'everyday-knit': {
@@ -114,6 +124,7 @@ export const PROFILES: Record<UseCase, ScoringProfile> = {
     poorFibers: ['acrylic'],
     wearsPerYear: 25,
     price: { base: 16, perPoint: 9 },
+    substancePrice: { base: 8, perPoint: 5 },
     comparableCategory: 'knit',
   },
   unknown: {
@@ -127,6 +138,7 @@ export const PROFILES: Record<UseCase, ScoringProfile> = {
     poorFibers: [],
     wearsPerYear: 30,
     price: PRICE_MODEL.unknown,
+    substancePrice: { base: 6, perPoint: 3 },
     comparableCategory: 'unknown',
   },
 };

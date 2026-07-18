@@ -90,6 +90,35 @@ describe('same fabric, different verdict (the Objective-2 payoff)', () => {
   });
 });
 
+describe('brand premium (product vs brand)', () => {
+  it('flags a heavy brand premium on an overpriced fast-fashion logo tee', () => {
+    const bp = analyze(SAMPLE_BAD_TEE).brandPremium; // $45 poly/cotton tee
+    expect(bp).not.toBeNull();
+    expect(bp!.premiumPct).toBeGreaterThan(0.75);
+    expect(['high', 'extreme']).toContain(bp!.tier);
+  });
+
+  it('rates honest merino as mostly substance, not brand', () => {
+    const bp = analyze(SAMPLE_KNIT).brandPremium; // $95 merino crew
+    expect(bp).not.toBeNull();
+    expect(bp!.premiumPct).toBeLessThan(analyze(SAMPLE_BAD_TEE).brandPremium!.premiumPct);
+    expect(['deal', 'low', 'moderate']).toContain(bp!.tier);
+  });
+
+  it('splits the asking price into substance + brand that add up', () => {
+    const bp = analyze(SAMPLE_BAD_TEE).brandPremium!;
+    expect(bp.substancePrice + bp.premiumDollars).toBeCloseTo(bp.askingPrice, 1);
+    expect(bp.substanceShare).toBeGreaterThanOrEqual(0);
+    expect(bp.substanceShare).toBeLessThanOrEqual(1);
+    expect(bp.caption.length).toBeGreaterThan(0);
+    expect(bp.caption).not.toContain('—'); // human voice, no em dashes
+  });
+
+  it('is null when there is no price', () => {
+    expect(analyze({ ...SAMPLE_BAD_TEE, price: null }).brandPremium).toBeNull();
+  });
+});
+
 describe('category context is always well-formed', () => {
   it('exposes a useCase, label, and blurb on every analysis', () => {
     for (const p of [SAMPLE_TEE, SAMPLE_KNIT, SAMPLE_ACTIVEWEAR, SAMPLE_BAD_TEE]) {

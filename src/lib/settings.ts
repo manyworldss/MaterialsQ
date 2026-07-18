@@ -10,6 +10,9 @@ export interface Settings {
   /** AI review summaries. OFF until the AI backend goes live at launch — when
    *  false the extension never contacts the backend and scores fully locally. */
   reviewSummaries: boolean;
+  /** AI plain-English explanation of the verdict. OFF until the backend is live.
+   *  The AI only phrases the rule-based facts; it never sets the score. */
+  aiExplanations: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -17,6 +20,7 @@ export const DEFAULT_SETTINGS: Settings = {
   minConfidence: 0.5,
   showAlternatives: true,
   reviewSummaries: false,
+  aiExplanations: false,
 };
 
 const KEY = 'miq_settings';

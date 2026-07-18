@@ -12,6 +12,8 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import { summarizeReviews, type ReviewSummaryResult } from './summarize.js';
+import { explainAnalysis, type ExplainFacts, type ExplainResult } from './explain.js';
+import { RateLimiter } from './ratelimit.js';
 import { PersistentCache, UpstashCache, type ICache, productKeyFromUrl } from './cache.js';
 
 const app = express();
@@ -35,6 +37,8 @@ const CACHE_TTL_DAYS = Number(process.env.MIQ_CACHE_TTL_DAYS ?? 30);
 const CACHE_TTL_MS = CACHE_TTL_DAYS * 24 * 60 * 60 * 1000;
 let cache: ICache<ReviewSummaryResult>;
 
+let explainCache: ICache<ExplainResult>;
+
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   console.log('[cache] Initializing Upstash Redis cache');
   cache = new UpstashCache<ReviewSummaryResult>(
@@ -42,10 +46,31 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
     process.env.UPSTASH_REDIS_REST_TOKEN,
     CACHE_TTL_DAYS * 24 * 60 * 60, // TTL in seconds for Redis
   );
+  // Shares the Redis instance; explanation keys are prefixed 'ex:' at the call
+  // site so they never collide with summary keys ('p:' / 'h:').
+  explainCache = new UpstashCache<ExplainResult>(
+    process.env.UPSTASH_REDIS_REST_URL,
+    process.env.UPSTASH_REDIS_REST_TOKEN,
+    CACHE_TTL_DAYS * 24 * 60 * 60,
+  );
 } else {
   console.log('[cache] Initializing local persistent file cache');
   const CACHE_FILE = process.env.MIQ_CACHE_FILE || 'summary-cache.json';
   cache = new PersistentCache<ReviewSummaryResult>(CACHE_FILE, CACHE_TTL_MS, 5000);
+  explainCache = new PersistentCache<ExplainResult>(process.env.MIQ_EXPLAIN_CACHE_FILE || 'explain-cache.json', CACHE_TTL_MS, 5000);
+}
+
+// Per-IP rate limits for the paid AI endpoints. Free app → these cap how fast a
+// single actor can run up our Anthropic bill. Cache hits still serve instantly;
+// only genuine model calls draw from the budget, but we limit at the edge anyway.
+const aiLimiter = new RateLimiter(Number(process.env.MIQ_AI_RATE_MAX ?? 30), Number(process.env.MIQ_AI_RATE_WINDOW_MS ?? 60_000));
+setInterval(() => aiLimiter.sweep(), 5 * 60_000).unref?.();
+
+function clientIp(req: express.Request): string {
+  // Railway/proxies set x-forwarded-for; take the first hop. Fall back to socket.
+  const fwd = req.headers['x-forwarded-for'];
+  const first = Array.isArray(fwd) ? fwd[0] : fwd?.split(',')[0];
+  return (first || req.socket.remoteAddress || 'unknown').trim();
 }
 
 // Key by product identity (normalized URL) when available, so color/size variants
@@ -69,6 +94,9 @@ app.post('/api/summarize', async (req, res) => {
   const hit = await cache.get(key);
   if (hit) return res.json({ ...hit, cached: true });
 
+  // Rate-limit only genuine (uncached) model calls.
+  if (!aiLimiter.take(clientIp(req))) return res.status(429).json({ error: 'Rate limit exceeded, try again shortly' });
+
   try {
     const result = await summarizeReviews(title, reviews);
     await cache.set(key, result);
@@ -76,6 +104,56 @@ app.post('/api/summarize', async (req, res) => {
   } catch (err) {
     console.error('[summarize] failed:', err);
     res.status(502).json({ error: 'Summarization failed' });
+  }
+});
+
+// AI explanation: turn the engine's deterministic facts into one plain-English
+// paragraph. The client sends ONLY facts the rubric already computed; the model
+// never sets the score. Cached by product identity + a hash of the facts (so a
+// rubric change or a different product yields a fresh explanation).
+app.post('/api/explain', async (req, res) => {
+  const facts = req.body?.facts as ExplainFacts | undefined;
+  const url = typeof req.body?.url === 'string' ? (req.body.url as string) : undefined;
+  if (
+    !facts ||
+    typeof facts.title !== 'string' ||
+    typeof facts.useCaseLabel !== 'string' ||
+    !['worth', 'fair', 'skip'].includes(facts.verdict) ||
+    typeof facts.composition !== 'string' ||
+    !Array.isArray(facts.factors)
+  ) {
+    return res.status(400).json({ error: 'Expected { facts: ExplainFacts, url?: string }' });
+  }
+
+  // Bound the input: cap string lengths and factor count so a crafted payload
+  // can't inflate a request. These are generous for real product data.
+  const bounded: ExplainFacts = {
+    title: facts.title.slice(0, 200),
+    useCaseLabel: facts.useCaseLabel.slice(0, 60),
+    verdict: facts.verdict,
+    composition: facts.composition.slice(0, 300),
+    materialNote: (facts.materialNote ?? '').slice(0, 400),
+    brandCaption: facts.brandCaption ? String(facts.brandCaption).slice(0, 300) : null,
+    factors: facts.factors.slice(0, 6).map((f) => ({ label: String(f.label).slice(0, 40), value: Number(f.value) || 0, max: Number(f.max) || 10 })),
+  };
+
+  // Key on product identity + a hash of the exact facts, so identical inputs
+  // reuse one explanation and a rubric change invalidates it.
+  const pk = productKeyFromUrl(url);
+  const factHash = createHash('sha256').update(JSON.stringify(bounded)).digest('hex').slice(0, 16);
+  const key = `ex:${pk ?? 'nourl'}:${factHash}`;
+  const hit = await explainCache.get(key);
+  if (hit) return res.json({ ...hit, cached: true });
+
+  if (!aiLimiter.take(clientIp(req))) return res.status(429).json({ error: 'Rate limit exceeded, try again shortly' });
+
+  try {
+    const result = await explainAnalysis(bounded);
+    if (result.explanation) await explainCache.set(key, result);
+    res.json(result);
+  } catch (err) {
+    console.error('[explain] failed:', err);
+    res.status(502).json({ error: 'Explanation failed' });
   }
 });
 

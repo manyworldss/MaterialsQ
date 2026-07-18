@@ -33,6 +33,7 @@ function specChips(a: Analysis) {
 export function Scorecard({
   analysis,
   isDemo,
+  aiExplanation,
   onOpenOptions,
   onRefresh,
   headerExtra,
@@ -40,6 +41,9 @@ export function Scorecard({
 }: {
   analysis: Analysis;
   isDemo?: boolean;
+  /** Optional AI-written plain-English explanation. Shown labeled as AI. The
+      surface fetches this only when the setting is on; null renders nothing. */
+  aiExplanation?: string | null;
   onOpenOptions: () => void;
   onRefresh?: () => boolean | void | Promise<boolean | void>;
   headerExtra?: ReactNode;
@@ -54,7 +58,11 @@ export function Scorecard({
   const scoreFactors = analysis.factors.filter((f) => f.key !== 'value');
   const valueFactor = analysis.factors.find((f) => f.key === 'value');
   const cpw = analysis.costPerWear;
+  const bp = analysis.brandPremium;
   const tone = scoreTone(analysis.overall).color;
+  // Colour the brand portion by how heavy it is: light premium reads neutral,
+  // heavy premium reads as a warning.
+  const brandColor = bp && (bp.tier === 'high' || bp.tier === 'extreme') ? 'var(--score-low)' : bp && bp.tier === 'moderate' ? 'var(--score-mid)' : 'var(--fg-3)';
 
   const shareVerdict = async () => {
     const text = `${p.title} — ${analysis.overall.toFixed(1)}/10, ${VERDICT_TEXT[analysis.verdict]}. ${analysis.verdictCopy} (via MaterialIQ)`;
@@ -164,6 +172,31 @@ export function Scorecard({
           </div>
         )}
 
+        {/* Brand premium — product vs brand (Objective 3). */}
+        {bp && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', color: 'var(--fg-2)' }}>Product or brand?</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: brandColor }}>
+                {bp.premiumDollars >= 0 ? `+${Math.round(bp.premiumPct * 100)}% brand premium` : 'below substance'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--surface-card-2)' }}>
+              <div style={{ width: `${Math.round(bp.substanceShare * 100)}%`, background: 'var(--score-high)' }} />
+              <div style={{ flex: 1, background: brandColor }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 7, fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)' }}>
+              <span style={{ color: 'var(--fg-2)' }}>
+                <span style={{ color: 'var(--score-high)' }}>■</span> Substance ${bp.substancePrice.toFixed(0)}
+              </span>
+              <span style={{ color: 'var(--fg-2)' }}>
+                <span style={{ color: brandColor }}>■</span> Brand ${Math.max(0, bp.premiumDollars).toFixed(0)}
+              </span>
+            </div>
+            <p style={{ margin: '10px 0 0', fontSize: 'var(--text-xs)', color: 'var(--fg-2)', lineHeight: 1.5 }}>{bp.caption}</p>
+          </div>
+        )}
+
         {/* Spec strip — full width, hairline top, not a card */}
         {specChips(analysis).length > 0 && (
           <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border-1)', display: 'flex', gap: '6px 18px', flexWrap: 'wrap' }}>
@@ -174,7 +207,16 @@ export function Scorecard({
             ))}
           </div>
         )}
-        <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-2)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-label)' }}>Explanation by AI · scoring is rules, not AI</div>
+        {/* AI explanation — shown only when the setting is on and the backend
+            returns one. Clearly labeled; it phrases the numbers, never sets them. */}
+        {aiExplanation && (
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid var(--border-1)' }}>
+            <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)', color: 'var(--accent)', marginBottom: 6 }}>AI explanation</div>
+            <p style={{ margin: 0, fontSize: 'var(--text-sm)', color: 'var(--fg-2)', lineHeight: 1.55 }}>{aiExplanation}</p>
+          </div>
+        )}
+
+        <div style={{ marginTop: 8, fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-2)', textTransform: 'uppercase', letterSpacing: 'var(--tracking-label)' }}>Score and verdict are rule-based. AI only writes the explanation.</div>
       </div>
 
       {/* Tabs */}

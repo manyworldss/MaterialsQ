@@ -27,6 +27,59 @@ function computeCostPerWear(product: Product, stars: number, profile: ScoringPro
   return { perWear: product.price / wears, wears, years };
 }
 
+/* ---- Brand premium: product vs brand ---- */
+
+function computeBrandPremium(product: Product, qualityScore: number, profile: ScoringProfile) {
+  // Needs a price, and a use-case we can price a substance floor for.
+  if (product.price == null || product.price <= 0 || profile.useCase === 'unknown') return null;
+  const asking = product.price;
+  const substance = Math.max(1, round1(profile.substancePrice.base + profile.substancePrice.perPoint * qualityScore));
+  const premiumDollars = asking - substance;
+  const premiumPct = premiumDollars / substance;
+  const substanceShare = clamp(substance / asking, 0, 1);
+
+  let tier: 'deal' | 'low' | 'moderate' | 'high' | 'extreme';
+  let label: string;
+  if (premiumPct < 0) {
+    tier = 'deal';
+    label = 'Priced below its substance';
+  } else if (premiumPct < 0.25) {
+    tier = 'low';
+    label = 'Mostly substance';
+  } else if (premiumPct < 0.75) {
+    tier = 'moderate';
+    label = 'Some brand premium';
+  } else if (premiumPct < 1.5) {
+    tier = 'high';
+    label = 'High brand premium';
+  } else {
+    tier = 'extreme';
+    label = 'Mostly the label';
+  }
+
+  const dol = Math.round(Math.abs(premiumDollars));
+  const ask = Math.round(asking);
+  let caption: string;
+  switch (tier) {
+    case 'deal':
+      caption = `The materials and make are worth more than the asking price. That is rare.`;
+      break;
+    case 'low':
+      caption = `Almost all of this price is the garment. Only about $${dol} is the brand.`;
+      break;
+    case 'moderate':
+      caption = `About $${dol} of the $${ask} is brand premium. The rest is the garment itself.`;
+      break;
+    case 'high':
+      caption = `Roughly $${dol} of this price is the name, not the garment.`;
+      break;
+    default:
+      caption = `You are mostly paying for the label. About $${dol} of $${ask} is brand tax.`;
+  }
+
+  return { substancePrice: substance, askingPrice: asking, premiumPct, premiumDollars, substanceShare, tier, label, caption };
+}
+
 const clamp = (n: number, lo = 0, hi = 10) => Math.max(lo, Math.min(hi, n));
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
@@ -209,6 +262,7 @@ export function analyze(product: Product): Analysis {
   const alternative = verdict === 'worth' ? null : findAlternative(profile.comparableCategory, qualityScore, product.price);
   const options = betterOptions(profile.comparableCategory, qualityScore, product.price, product.title);
   const costPerWear = computeCostPerWear(product, stars, profile);
+  const brandPremium = computeBrandPremium(product, qualityScore, profile);
   const careAndFlags = computeFlags(product);
   const categoryContext = buildCategoryContext(product, profile);
 
@@ -229,6 +283,7 @@ export function analyze(product: Product): Analysis {
     alternative,
     betterOptions: options,
     costPerWear,
+    brandPremium,
     careAndFlags,
     rubricVersion: RUBRIC_VERSION,
     analyzedMs: Math.max(1, Math.round(performance.now() - t0)),

@@ -122,6 +122,25 @@ export interface BetterOption {
   url: string;
 }
 
+/** "Are you buying the product or the brand?" — the share of the asking price
+    that isn't explained by material and construction. */
+export interface BrandPremium {
+  /** What a no-name maker of the same substance would charge, in dollars. */
+  substancePrice: number;
+  askingPrice: number;
+  /** (asking - substance) / substance. Negative means priced below its substance. */
+  premiumPct: number;
+  /** asking - substance, in dollars. Negative when it's a genuine deal. */
+  premiumDollars: number;
+  /** 0–1 portion of the asking price that is substance (for the split bar). */
+  substanceShare: number;
+  tier: 'deal' | 'low' | 'moderate' | 'high' | 'extreme';
+  /** Short display label, e.g. "High brand premium". */
+  label: string;
+  /** One plain-English sentence. Human voice, no jargon. */
+  caption: string;
+}
+
 /** Price reframed around use, not sticker. */
 export interface CostPerWear {
   perWear: number; // dollars per wear
@@ -152,6 +171,8 @@ export interface Analysis {
   betterOptions: BetterOption[];
   /** Price per wear, when a price is known. */
   costPerWear: CostPerWear | null;
+  /** Brand premium — product vs brand, when a price and use-case are known. */
+  brandPremium: BrandPremium | null;
   /** Material red-flags and care instructions based on composition. */
   careAndFlags: { text: string; type: 'warning' | 'info' }[];
   /** Rubric version the score was computed under — printed in the UI for auditability. */

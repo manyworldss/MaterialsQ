@@ -6,6 +6,7 @@ import { analyze } from '../engine/score';
 import type { Analysis } from '../engine/types';
 import { SAMPLE_TEE } from '../engine/samples';
 import { recheckActiveTab, requestActiveTabAnalysis } from '../lib/messages';
+import { fetchExplanation } from '../lib/explain';
 
 /* Persistent, docked scorecard. Unlike the popup it stays open and updates live
    as you move between product pages — so you can browse and compare without
@@ -14,6 +15,7 @@ export function SidePanel() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [aiExplanation, setAiExplanation] = useState<string | null>(null);
 
   const load = useCallback(() => {
     requestActiveTabAnalysis().then((res) => {
@@ -50,6 +52,20 @@ export function SidePanel() {
     };
   }, [load]);
 
+  // Fetch the AI explanation whenever the analysis changes (tab switch, SPA nav,
+  // re-check). No-ops unless the setting is on; card always renders from rules.
+  useEffect(() => {
+    if (!analysis) return;
+    let live = true;
+    setAiExplanation(null);
+    fetchExplanation(analysis).then((t) => {
+      if (live) setAiExplanation(t);
+    });
+    return () => {
+      live = false;
+    };
+  }, [analysis]);
+
   const openOptions = () => chrome.runtime.openOptionsPage();
   const refresh = async () => {
     const res = await recheckActiveTab();
@@ -66,7 +82,7 @@ export function SidePanel() {
 
   return (
     <div>
-      <Scorecard analysis={analysis} isDemo={isDemo} onOpenOptions={openOptions} onRefresh={refresh}>
+      <Scorecard analysis={analysis} isDemo={isDemo} aiExplanation={aiExplanation} onOpenOptions={openOptions} onRefresh={refresh}>
         <BetterOptions options={analysis.betterOptions} />
       </Scorecard>
       <ScrollHint />
