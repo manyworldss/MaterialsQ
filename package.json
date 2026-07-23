@@ -1,7 +1,7 @@
 {
   "name": "materialiq-extension",
   "version": "1.0.0",
-  "description": "See if a product is worth its price, judged on material quality, construction, and comparable pricing. No hype, just the numbers.",
+  "description": "See if a product is worth its price based on material quality, construction, and comparable pricing. No hype, just data.",
   "private": true,
   "type": "module",
   "scripts": {

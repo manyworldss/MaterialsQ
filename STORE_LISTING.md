@@ -12,9 +12,9 @@ Upload artifact: **`MaterialIQ-chrome-store-v1.0.0.zip`** (repo root).
 MaterialIQ: is it worth the price?
 ```
 
-**Summary** (short description, max 132 chars)
+**Summary** (short description, max 132 chars - 122 chars)
 ```
-See if a product is worth its price, judged on material quality, construction, and comparable pricing. No hype, just the numbers.
+See if a product is worth its price based on material quality, construction, and comparable pricing. No hype, just data.
 ```
 
 **Category:** Shopping

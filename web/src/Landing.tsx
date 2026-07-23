@@ -69,7 +69,7 @@ function Nav({ onCta }: { onCta: () => void }) {
 /* ---------------------------------------------------------------- Hero */
 function Hero({ onCta }: { onCta: () => void }) {
   return (
-    <section className="hero-grid" style={{ maxWidth: PAGE, margin: '0 auto', padding: '120px clamp(20px, 4vw, 40px) 72px', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center' }}>
+    <section className="hero-grid" style={{ maxWidth: PAGE, margin: '0 auto', padding: '150px clamp(20px, 4vw, 40px) 72px', gap: 'clamp(32px, 5vw, 64px)', alignItems: 'center' }}>
       <div>
         <Reveal onMount><div style={{ ...eyebrow, marginBottom: 20 }}>Objective Garment Intelligence · Beta</div></Reveal>
         <Reveal delay={0.06} onMount>
@@ -85,7 +85,7 @@ function Hero({ onCta }: { onCta: () => void }) {
           </p>
         </Reveal>
         <Reveal delay={0.18} onMount>
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="hero-cta-group" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
             <Button size="lg" onClick={() => document.getElementById('lab')?.scrollIntoView({ behavior: 'smooth' })}>
               Launch Material Lab ↓
             </Button>
@@ -434,29 +434,31 @@ function MaterialLab() {
 
         {/* Link Garment / Paste Text Input Bar */}
         <Reveal>
-          <div style={{ maxWidth: 680, margin: '0 auto 32px', display: 'flex', gap: 8, background: 'var(--surface-card)', padding: 6, borderRadius: 'var(--radius-pill)', border: '1px solid var(--border-2)', boxShadow: 'var(--shadow-card)' }}>
+          <div className="miq-search-bar">
+            <span className="miq-search-icon">
+              <Icon name="search" size={16} />
+            </span>
             <input
               type="text"
+              className="miq-search-input"
               value={urlInput}
               onChange={(e) => setUrlInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleParseUrlOrText(urlInput); }}
-              placeholder="Paste product link (Uniqlo, Everlane, Amazon, H&M) or raw text (e.g. 100% Cashmere $148)..."
-              style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', padding: '0 16px', fontSize: 'var(--text-sm)', color: 'var(--fg-1)', fontFamily: 'var(--font-sans)' }}
+              placeholder="Paste product URL (Uniqlo, Everlane, Amazon, H&M) or specs (e.g. 100% Cashmere $148)..."
             />
-            <Button
-              size="md"
-              icon={<Icon name="search" size={14} />}
+            <button
+              className="miq-search-btn"
               onClick={() => handleParseUrlOrText(urlInput)}
             >
-              Score Link / Specs
-            </Button>
+              Analyze →
+            </button>
           </div>
         </Reveal>
 
         {/* Preset Selector */}
         <Reveal>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 40 }}>
-            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-3)', display: 'inline-flex', alignItems: 'center', marginRight: 6 }}>Presets:</span>
+          <div className="miq-preset-bar">
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--fg-3)', display: 'inline-flex', alignItems: 'center', marginRight: 4 }}>Presets:</span>
             {PRESETS.map((p) => (
               <Button
                 key={p.key}
@@ -483,7 +485,7 @@ function MaterialLab() {
 
               {/* Asking Price Slider */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
                   <span style={{ fontWeight: 600 }}>Asking Price ($USD)</span>
                   <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--accent)' }}>${price.toFixed(2)}</span>
                 </div>
@@ -501,7 +503,7 @@ function MaterialLab() {
               {/* Category */}
               <div>
                 <div style={{ fontSize: 'var(--text-sm)', fontWeight: 600, marginBottom: 8 }}>Garment Category</div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                   {(['tshirt', 'knit', 'unknown'] as ItemCategory[]).map((cat) => (
                     <Button
                       key={cat}
@@ -517,12 +519,12 @@ function MaterialLab() {
 
               {/* Primary Fiber */}
               <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
                   <span style={{ fontWeight: 600 }}>Primary Fiber ({primaryPct}%)</span>
                   <select
+                    className="miq-select"
                     value={primaryFiber}
                     onChange={(e) => { setPrimaryFiber(e.target.value as Fiber); setSelectedPreset('custom'); }}
-                    style={{ fontFamily: 'var(--font-mono)', fontSize: 12, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-2)', background: 'var(--surface-card)' }}
                   >
                     <option value="cotton">Cotton</option>
                     <option value="merino">Merino Wool</option>
@@ -552,12 +554,12 @@ function MaterialLab() {
               {/* Secondary Fiber */}
               {primaryPct < 100 && (
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: 'var(--text-sm)' }}>
                     <span style={{ fontWeight: 600 }}>Secondary Fiber ({secondaryPct}%)</span>
                     <select
+                      className="miq-select"
                       value={secondaryFiber}
                       onChange={(e) => { setSecondaryFiber(e.target.value as Fiber); setSelectedPreset('custom'); }}
-                      style={{ fontFamily: 'var(--font-mono)', fontSize: 12, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border-2)', background: 'var(--surface-card)' }}
                     >
                       <option value="polyester">Polyester</option>
                       <option value="acrylic">Acrylic</option>
