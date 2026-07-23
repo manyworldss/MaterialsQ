@@ -19,15 +19,25 @@ import { PersistentCache, UpstashCache, type ICache, productKeyFromUrl } from '.
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-// CORS: allow the beta retailer origins (content scripts post from there) and any
-// chrome-extension:// origin. Override with MIQ_ALLOWED_ORIGINS (comma-separated).
-const DEFAULT_ORIGINS = ['https://www.uniqlo.com', 'https://www2.hm.com', 'https://www.amazon.com'];
+// CORS: allow the beta retailer origins, materialiq.app, local dev, and chrome-extension:// origins.
+const DEFAULT_ORIGINS = [
+  'https://www.uniqlo.com',
+  'https://www2.hm.com',
+  'https://www.amazon.com',
+  'https://materialiq.app',
+  'https://www.materialiq.app',
+  'http://localhost:5180',
+  'http://127.0.0.1:5180',
+  'http://localhost:8787',
+];
 const allowed = new Set((process.env.MIQ_ALLOWED_ORIGINS?.split(',') ?? DEFAULT_ORIGINS).map((s) => s.trim()));
 app.use(
   cors({
     origin(origin, cb) {
       if (!origin || origin.startsWith('chrome-extension://') || allowed.has(origin)) return cb(null, true);
-      cb(new Error(`Origin not allowed: ${origin}`));
+      // Fallback: allow same-site subdomains or pass false instead of throwing
+      if (origin.endsWith('materialiq.app')) return cb(null, true);
+      cb(null, false);
     },
   }),
 );
