@@ -18,7 +18,8 @@
     "types": ["vite/client"],
     "paths": {
       "@ds": ["../src/design-system/index.ts"],
-      "@engine": ["../src/engine/index.ts"]
+      "@engine": ["../src/engine/index.ts"],
+      "@extraction": ["../src/extraction/index.ts"]
     }
   },
   "include": ["src"]

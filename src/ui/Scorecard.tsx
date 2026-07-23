@@ -3,10 +3,19 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, Check, ExternalLink, Info, RefreshCw, Settings2, Share2 } from 'lucide-react';
 import { Badge, Button, Card, CardRow, IconButton, Tabs } from '../design-system/core';
 import { ScoreBar, StarRating, VerdictPill, scoreTone } from '../design-system/scores';
-import type { Analysis } from '../engine/types';
+import type { Analysis, CompositionPart } from '../engine/types';
+import { FIBER_LABELS } from '../engine/rubric';
 import { affiliateUrl } from '../lib/config';
 
 const VERDICT_TEXT: Record<string, string> = { worth: 'Worth it', fair: 'Fair price', skip: 'Skip this one' };
+
+/* Display name for a fiber. Prefer the canonical label over the raw scrape —
+   messy page markup (collapsed <br>s, appended care text) can make raw strings
+   like "CottonImported", which read as broken. The parsed fiber is reliable. */
+function fiberName(part: CompositionPart): string {
+  const n = FIBER_LABELS[part.fiber] ?? part.fiber;
+  return n.charAt(0).toUpperCase() + n.slice(1);
+}
 
 function Wordmark() {
   return (
@@ -20,7 +29,7 @@ function specChips(a: Analysis) {
   const p = a.product;
   const d: { k: string; v: string }[] = [];
   const primary = [...p.composition].sort((x, y) => y.percent - x.percent)[0];
-  if (primary) d.push({ k: 'FIBER', v: primary.raw?.replace(/^\d+%\s*/, '') ?? primary.fiber });
+  if (primary) d.push({ k: 'FIBER', v: fiberName(primary) });
   if (p.gsm != null) d.push({ k: 'WEIGHT', v: `${p.gsm} GSM` });
   if (p.price != null) d.push({ k: 'ASKING', v: `$${p.price.toFixed(2)}` });
   return d;
@@ -243,7 +252,7 @@ export function Scorecard({
             {p.composition.length > 0 ? (
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {p.composition.map((c, i) => (
-                  <Badge key={i} mono>{c.percent}% {c.raw?.replace(/^\d+%\s*/, '') ?? c.fiber}</Badge>
+                  <Badge key={i} mono>{c.percent}% {fiberName(c)}</Badge>
                 ))}
                 {p.gsm != null && <Badge mono>{p.gsm} GSM</Badge>}
                 {p.yarn !== 'unknown' && <Badge mono>{p.yarn}</Badge>}
@@ -253,7 +262,7 @@ export function Scorecard({
             )}
             <Card padding="0 16px">
               {p.composition.map((c, i) => (
-                <CardRow key={i} label={c.raw?.replace(/^\d+%\s*/, '') ?? c.fiber} sub={`${c.percent}% of fabric`} value={`${c.percent}%`} />
+                <CardRow key={i} label={fiberName(c)} sub={`${c.percent}% of fabric`} value={`${c.percent}%`} />
               ))}
               {p.gsm != null && <CardRow label="Weight" sub="Fabric weight" value={`${p.gsm} GSM`} />}
               {p.origin && <CardRow label="Origin" value={p.origin} />}

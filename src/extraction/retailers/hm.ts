@@ -5,7 +5,7 @@
    selectors against a live PDP. */
 
 import type { Product } from '../../engine/types';
-import { extractGeneric } from './generic';
+import { extractGeneric, findProductRoot } from './generic';
 
 function textOf(doc: Document, selectors: string[]): string | null {
   for (const sel of selectors) {
@@ -27,14 +27,18 @@ export function extractHM(doc: Document, url: string): Product | null {
     html.match(/"(?:price|whitePrice|redPrice)"\s*:\s*\{[^{}]*?"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/)?.[1] ||
     textOf(doc, ['[class*="price"] [class*="value"]', 'span[class*="price"]', '[data-testid*="price"]']);
 
-  // Composition: blob field, then hydrated materials panels. The generic
-  // extractor also scans scripts as a last resort.
-  const compM = html.match(/"composition"\s*:\s*"([^"]+)"/i) || html.match(/Composition[^%<]{0,30}(\d{1,3}\s*%[^<"]{0,60})/i);
-  const panels = Array.from(doc.querySelectorAll('[class*="composition"], [class*="materials"], [class*="ProductDetails"], [class*="detail"], section, dl'))
-    .map((n) => n.textContent?.replace(/\s+/g, ' ').trim() || '')
-    .filter((t) => /(cotton|polyester|wool|elastane|viscose|composition|%)/i.test(t))
-    .join(' · ');
-  const specText = [compM ? compM[1] : '', panels].filter(Boolean).join(' · ') || undefined;
+  // Composition: H&M uses hashed CSS classes that change per deploy, so class
+  // selectors are useless, and a broad section/dl scan pulls fabric from
+  // recommendation cards ("you may also like"). Instead anchor on the visible
+  // "Composition" label — recommendation cards show "Save to favourites", never a
+  // Composition label — and scope the search to the main product region. Handles
+  // both single fibers ("Polyester 100%") and blends ("Cotton 60%, Polyester 40%").
+  const blobM = html.match(/"composition"\s*:\s*"([^"]+)"/i);
+  const rootText = (findProductRoot(doc).textContent || '').replace(/\s+/g, ' ');
+  const labelM = rootText.match(
+    /Composition\s*([A-Za-z][A-Za-z\s]{0,20}?\d{1,3}\s*%(?:\s*[,/]?\s*[A-Za-z][A-Za-z\s]{0,20}?\d{1,3}\s*%)*)/i,
+  );
+  const specText = blobM?.[1] || labelM?.[1] || undefined;
 
   return extractGeneric(doc, url, { title, priceText, specText });
 }

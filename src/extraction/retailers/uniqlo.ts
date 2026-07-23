@@ -29,13 +29,17 @@ export function extractUniqlo(doc: Document, url: string): Product | null {
   const title =
     (og || nameInBlob?.[1] || doc.querySelector('h1')?.textContent || '').replace(/\s*\|\s*UNIQLO.*$/i, '').trim() || null;
 
-  // Price: prices.base.value in the embedded state (dollars).
-  // base has a nested currency:{…} object before value, so match across it (bounded).
+  // Price: try the legacy state blob first (older markets still ship it), then the
+  // current DOM. Uniqlo's rebuilt storefront (fr-ec-* classes) no longer embeds a
+  // prices blob — the main PDP price renders in .fr-ec-price-text--large, while the
+  // --middle variants are recommendation cards. Target the large one so we never
+  // grab a related item's price.
   const priceM = html.match(/"prices"\s*:\s*\{\s*"base"\s*:\s*\{[\s\S]{0,200}?"value"\s*:\s*([0-9]+(?:\.[0-9]+)?)/);
-  const priceText =
-    priceM?.[1] ||
-    doc.querySelector('[class*="price"] [class*="value"], span[class*="price"], [data-testid*="price"]')?.textContent ||
-    null;
+  const priceEl =
+    doc.querySelector('.fr-ec-price-text--large') ||
+    doc.querySelector('main .fr-ec-price-text, [role="main"] .fr-ec-price-text') ||
+    doc.querySelector('.fr-ec-price-text, [class*="price-text" i], span[class*="price" i], [data-testid*="price" i]');
+  const priceText = priceM?.[1] || priceEl?.textContent || null;
 
   // Composition: embedded field, else any hydrated panel that mentions fibers.
   const compM = html.match(/"composition"\s*:\s*"([^"]+)"/);

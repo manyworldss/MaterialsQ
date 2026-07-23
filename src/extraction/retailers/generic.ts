@@ -13,8 +13,14 @@ export interface JsonLdProduct {
   currency?: string;
 }
 
-/** Pull the first schema.org Product out of any JSON-LD blocks (handles @graph). */
-export function readJsonLd(doc: Document): JsonLdProduct | null {
+const norm = (s?: string) => (s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Pull schema.org Products out of any JSON-LD blocks (handles @graph). When
+    `preferredName` is given (the page's real product title), returns the Product
+    whose name matches it — a PDP often carries several Products (main item plus
+    "related"/breadcrumb entries), and the first is not always the graded one. */
+export function readJsonLd(doc: Document, preferredName?: string): JsonLdProduct | null {
+  const candidates: JsonLdProduct[] = [];
   const blocks = doc.querySelectorAll('script[type="application/ld+json"]');
   for (const block of Array.from(blocks)) {
     let data: unknown;
@@ -31,16 +37,55 @@ export function readJsonLd(doc: Document): JsonLdProduct | null {
       const offers = ([] as Record<string, unknown>[]).concat((node.offers as Record<string, unknown>) ?? []);
       const offer = offers[0] ?? {};
       const price = offer.price != null ? parsePrice(String(offer.price)) : null;
-      return {
+      candidates.push({
         name: typeof node.name === 'string' ? node.name : undefined,
         material: typeof node.material === 'string' ? node.material : undefined,
         description: typeof node.description === 'string' ? node.description : undefined,
         price,
         currency: typeof offer.priceCurrency === 'string' ? offer.priceCurrency : undefined,
-      };
+      });
     }
   }
-  return null;
+  if (!candidates.length) return null;
+  if (preferredName) {
+    const target = norm(preferredName);
+    const match = candidates.find((c) => {
+      const n = norm(c.name);
+      return n && (n === target || (target.length >= 8 && (n.includes(target.slice(0, 16)) || target.includes(n.slice(0, 16)))));
+    });
+    if (match) return match;
+  }
+  return candidates[0];
+}
+
+/* Regions that hold OTHER products — recommendations, related items, recently
+   viewed, cross-sells, breadcrumbs, nav, footer. We must never read the graded
+   product's specs from these, or a "You may also like" item's fabric can
+   silently override the real one. */
+const EXCLUDED_REGION =
+  /(recommend|related|you[-\s]?may|similar|recently[-\s]?viewed|also[-\s]?(bought|viewed|like|purchased)|complete[-\s]?the[-\s]?look|shop[-\s]?the[-\s]?look|customers[-\s]?also|cross[-\s]?sell|upsell|carousel|slider|suggest|more[-\s]?like|pairs[-\s]?with|breadcrumb|site[-\s]?nav|megamenu)/i;
+
+/** True if the node sits inside a recommendations/related/nav/footer region,
+    detected by id, class, data-testid, aria-label, or structural tag. */
+export function inExcludedRegion(node: Element, root: Element): boolean {
+  const stopAt = root.parentElement;
+  for (let el: Element | null = node; el && el !== stopAt; el = el.parentElement) {
+    const tag = el.tagName;
+    if (tag === 'NAV' || tag === 'FOOTER') return true;
+    const hay = `${el.id} ${el.getAttribute('class') ?? ''} ${el.getAttribute('data-testid') ?? ''} ${el.getAttribute('aria-label') ?? ''}`;
+    if (EXCLUDED_REGION.test(hay)) return true;
+  }
+  return false;
+}
+
+/** Best-effort main-product container to scope spec scanning. Prefer the
+    semantic main region, but only when it actually contains the product title —
+    otherwise fall back to <body>. Recommendation regions inside it are still
+    excluded separately. */
+export function findProductRoot(doc: Document): Element {
+  const main = doc.querySelector('main, [role="main"]');
+  if (main && (main.querySelector('h1') || main.querySelector('[itemprop="name"]'))) return main;
+  return doc.body || doc.documentElement;
 }
 
 export function readMeta(doc: Document, names: string[]): string | null {
@@ -53,13 +98,15 @@ export function readMeta(doc: Document, names: string[]): string | null {
 }
 
 /* Gather a bounded set of text snippets likely to hold composition / weight /
-   construction info, without slurping the whole page. */
-export function collectSpecText(doc: Document): string {
+   construction info — scoped to the main product region and skipping any
+   recommendation/related subtrees, so we never read a different item's specs. */
+export function collectSpecText(root: Element): string {
   const KEY = /(composition|material|fabric|cotton|polyester|wool|linen|viscose|cashmere|nylon|acrylic|gsm|g\/m|ring[-\s]?spun|stitch|seam|knit|fashioned|reinforced|taped|% )/i;
   const out: string[] = [];
-  const nodes = doc.querySelectorAll('li, dd, dt, td, th, p, span, div');
+  const nodes = root.querySelectorAll('li, dd, dt, td, th, p, span, div');
   for (const node of Array.from(nodes)) {
     if (out.length > 40) break;
+    if (inExcludedRegion(node, root)) continue;
     const t = (node.textContent || '').replace(/\s+/g, ' ').trim();
     if (t.length > 4 && t.length < 240 && KEY.test(t)) out.push(t);
   }
@@ -101,15 +148,14 @@ export interface ExtractOptions {
 
 export function extractGeneric(doc: Document, url: string, opts: ExtractOptions = {}): Product | null {
   const host = new URL(url).hostname;
-  const ld = readJsonLd(doc);
 
-  const title =
-    opts.title ||
-    ld?.name ||
-    readMeta(doc, ['og:title']) ||
-    doc.querySelector('h1')?.textContent?.trim() ||
-    doc.title ||
-    'Unknown product';
+  // The page's real product title (og:title / h1) — used to pick the RIGHT
+  // Product from JSON-LD when a page carries several.
+  const pageTitle =
+    opts.title || readMeta(doc, ['og:title']) || doc.querySelector('h1')?.textContent?.trim() || doc.title || '';
+  const ld = readJsonLd(doc, pageTitle);
+
+  const title = opts.title || ld?.name || pageTitle || 'Unknown product';
 
   const priceText =
     opts.priceText ||
@@ -118,13 +164,24 @@ export function extractGeneric(doc: Document, url: string, opts: ExtractOptions 
   const price = priceText ? parsePrice(priceText) : null;
   const currency = ld?.currency || readMeta(doc, ['product:price:currency', 'og:price:currency']) || 'USD';
 
-  // DOM scan first (cheapest signal); only fall back to script-blob scanning
-  // when the DOM didn't yield fiber content — that's the SPA case.
-  const domSpec = collectSpecText(doc);
-  const needScripts = !/(cotton|polyester|wool|linen|viscose|cashmere|nylon|acrylic)/i.test(`${opts.specText ?? ''} ${ld?.material ?? ''} ${domSpec}`);
-  const specText = [opts.specText, ld?.material, ld?.description, domSpec, needScripts ? scanScriptsForSpecs(doc) : '']
-    .filter(Boolean)
-    .join(' · ');
+  // Composition source, in order of trust:
+  //  1. If the retailer adapter or JSON-LD already gave us fiber content for THIS
+  //     product, use ONLY that — do not append the broad DOM/script scan, which
+  //     can pull fabric from a recommendations carousel and win the parse.
+  //  2. Otherwise scan the main product region (scoped + recommendation-excluded),
+  //     and fall back to script blobs only when the DOM yields no fiber (SPA case).
+  const FIBER = /(cotton|polyester|wool|linen|viscose|cashmere|nylon|acrylic|elastane|spandex|modal|silk|bamboo)/i;
+  const provided = [opts.specText, ld?.material].filter(Boolean).join(' · ');
+  let specText: string;
+  if (FIBER.test(provided)) {
+    specText = provided;
+  } else {
+    const domSpec = collectSpecText(findProductRoot(doc));
+    const needScripts = !FIBER.test(`${ld?.material ?? ''} ${domSpec}`);
+    specText = [opts.specText, ld?.material, ld?.description, domSpec, needScripts ? scanScriptsForSpecs(doc) : '']
+      .filter(Boolean)
+      .join(' · ');
+  }
 
   const composition = parseComposition(specText);
   const gsm = parseGsm(specText);

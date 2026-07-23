@@ -1,21 +1,40 @@
 /* The injected badge — ALWAYS ink-dark, pinned to the retailer's light page.
    Opens a frosted-glass mini-card. New cream/azure/ink design system. */
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Analysis } from '../engine/types';
 import { ScoreBar, VerdictPill } from '../design-system/scores';
 
 const VERDICT_DOT: Record<string, string> = { worth: 'var(--score-high)', fair: 'var(--fg-inverse-2)', skip: 'var(--score-low)' };
 const VERDICT_SHORT: Record<string, string> = { worth: 'Worth it', fair: 'Fair price', skip: 'Skip it' };
 
+const CARD_W = 300;
+const CARD_H = 220; // approximate; only used to decide flip direction
+
 export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl: string }) {
   const [open, setOpen] = useState(false);
+  // Which way the card opens, decided from viewport space at toggle time so it
+  // never spills off-screen (the badge may be docked in a corner).
+  const [dir, setDir] = useState<{ up: boolean; right: boolean }>({ up: false, right: false });
+  const btnRef = useRef<HTMLButtonElement>(null);
   const top = analysis.factors.filter((f) => f.key !== 'value').slice(0, 3);
+
+  const toggle = () => {
+    if (!open && btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      setDir({
+        up: r.bottom + CARD_H > window.innerHeight && r.top - CARD_H > 0,
+        right: r.left + CARD_W > window.innerWidth,
+      });
+    }
+    setOpen((o) => !o);
+  };
 
   return (
     <span style={{ position: 'relative', display: 'inline-block', fontFamily: 'var(--font-sans)' }}>
       <button
-        onClick={() => setOpen(!open)}
+        ref={btnRef}
+        onClick={toggle}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -44,9 +63,11 @@ export function InlineBadge({ analysis, docsUrl }: { analysis: Analysis; docsUrl
         <div
           style={{
             position: 'absolute',
-            top: 'calc(100% + 10px)',
-            left: 0,
-            width: 300,
+            top: dir.up ? undefined : 'calc(100% + 10px)',
+            bottom: dir.up ? 'calc(100% + 10px)' : undefined,
+            left: dir.right ? undefined : 0,
+            right: dir.right ? 0 : undefined,
+            width: CARD_W,
             zIndex: 2147483647,
             background: 'var(--glass-fill-strong)',
             backdropFilter: 'blur(var(--glass-blur)) saturate(1.15)',

@@ -27,4 +27,5 @@ export function extractProduct(doc: Document = document, url: string = location.
   }
 }
 
-export { extractGeneric } from './retailers/generic';
+export { parseComposition } from './parse';
+export { extractGeneric, findProductRoot, inExcludedRegion } from './retailers/generic';

@@ -12,10 +12,12 @@ export default defineConfig({
     alias: {
       '@ds': resolve(here, '../src/design-system'),
       '@engine': resolve(here, '../src/engine'),
+      '@extraction': resolve(here, '../src/extraction'),
     },
   },
   server: {
     port: 5180,
+    host: true,
     fs: { allow: [resolve(here, '..')] }, // permit importing from ../src
   },
 });

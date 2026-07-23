@@ -7,7 +7,7 @@ import { StrictMode } from 'react';
 import tokensRaw from '../design-system/tokens.css?raw';
 import { analyze } from '../engine/score';
 import type { Analysis, Product } from '../engine/types';
-import { extractProduct } from '../extraction';
+import { extractProduct, findProductRoot, inExcludedRegion } from '../extraction';
 import { extractReviews } from '../extraction/reviews';
 import { getSettings } from '../lib/settings';
 import { fetchReviewSummary } from '../lib/reviews';
@@ -33,20 +33,24 @@ function ensureFonts() {
 }
 
 /* Find the on-page element that DISPLAYS the price, by matching the value —
-   retailer-agnostic (class names vary; the price string doesn't). Prefers the
+   retailer-agnostic (class names vary; the price string doesn't). Scoped to the
+   main product region and skipping recommendation carousels, so the badge
+   anchors to THIS product's price, not a "you may also like" item's. Prefers the
    smallest (leaf) element so we anchor to the price itself, not a big container. */
 function findPriceEl(price: number | null): Element | null {
   if (price == null) return null;
+  const root = findProductRoot(document);
   const exact = price.toFixed(2); // "29.90"
-  const rounded = String(Math.round(price));
-  const nodes = document.querySelectorAll('span, div, p, b, strong, ins, bdi, [class*="price" i], [data-testid*="price" i], [itemprop="price"]');
+  const nodes = root.querySelectorAll('span, div, p, b, strong, ins, bdi, [class*="price" i], [data-testid*="price" i], [itemprop="price"]');
   let best: Element | null = null;
   let bestLen = Infinity;
   for (const el of Array.from(nodes)) {
+    if (inExcludedRegion(el, root)) continue;
     const t = (el.textContent || '').replace(/\s+/g, '');
     if (!t || t.length > 24) continue; // skip large containers
-    const hit = t.includes(exact) || (/[$£€]/.test(t) && t.replace(/[^\d.]/g, '').startsWith(rounded));
-    if (hit && t.length < bestLen) {
+    // Match the exact value (with cents) to avoid latching onto a strikethrough
+    // original price or an unrelated number.
+    if (t.includes(exact) && t.length < bestLen) {
       best = el;
       bestLen = t.length;
     }
@@ -94,33 +98,30 @@ function mountBadge(analysis: Analysis) {
   const BADGE_W = 130;
   const BADGE_H = 32;
   let anchor: Element | null = null;
+  // Dock as a fixed corner chip. Used whenever anchoring beside the price would
+  // overlap page content — never cover the buy box / CTA.
+  const dockCorner = () => {
+    host.style.position = 'fixed';
+    host.style.top = host.style.left = '';
+    host.style.right = '20px';
+    host.style.bottom = '20px';
+  };
   const reposition = () => {
     if (!anchor || !anchor.isConnected) anchor = findPriceEl(analysis.product.price); // re-find if React swapped it
     const r = anchor?.isConnected ? anchor.getBoundingClientRect() : null;
-    if (r && (r.width || r.height)) {
+    // Only anchor beside the price when there's clear whitespace to its right.
+    // Otherwise the badge would sit ON TOP of the CTA / price subtext, so we dock
+    // it to the corner instead of covering content.
+    if (r && (r.width || r.height) && window.innerWidth - r.right > BADGE_W + 16) {
       host.style.position = 'absolute';
       host.style.right = host.style.bottom = '';
-      let top: number;
-      let left: number;
-      if (window.innerWidth - r.right > BADGE_W + 16) {
-        // room to the right of the price — sit beside it, vertically centered
-        top = window.scrollY + r.top + Math.max(0, (r.height - BADGE_H) / 2);
-        left = window.scrollX + r.right + 10;
-      } else {
-        // right-aligned buy box (Amazon/H&M) — drop below the price instead
-        top = window.scrollY + r.bottom + 6;
-        left = window.scrollX + r.left;
-      }
-      // never let it run off the right edge
+      const top = window.scrollY + r.top + Math.max(0, (r.height - BADGE_H) / 2);
+      let left = window.scrollX + r.right + 10;
       left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + window.innerWidth - BADGE_W - 8));
       host.style.top = `${top}px`;
       host.style.left = `${left}px`;
     } else {
-      // No price element on the page — dock in the corner instead.
-      host.style.position = 'fixed';
-      host.style.top = host.style.left = '';
-      host.style.right = '20px';
-      host.style.bottom = '20px';
+      dockCorner();
     }
   };
 

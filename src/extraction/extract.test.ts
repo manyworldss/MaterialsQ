@@ -62,6 +62,45 @@ describe('extractGeneric — markup shapes', () => {
     expect(p.constructionSignals.length).toBeGreaterThan(0);
   });
 
+  it('ignores composition from a "you may also like" recommendations section', () => {
+    // The main product is cotton; a recommended item is polyester. We must grade
+    // the cotton, never let the recommendation's fabric leak in.
+    const doc = docFrom(`<html><head>
+      <meta property="og:title" content="Classic Cotton Tee" />
+      <meta property="product:price:amount" content="25.00" />
+      </head><body><main>
+        <h1>Classic Cotton Tee</h1>
+        <div class="product-details">
+          <table><tr><th>Material</th><td>100% Cotton</td></tr>
+          <tr><th>Weight</th><td>180 GSM</td></tr></table>
+        </div>
+        <section class="you-may-also-like" aria-label="Recommended products">
+          <h2>You may also like</h2>
+          <div class="rec-card"><p>Material: 100% Polyester</p><p>90 GSM</p></div>
+        </section>
+      </main></body></html>`);
+    const p = extractGeneric(doc, 'https://example.com/p/cotton-tee')!;
+    expect(p.composition).toEqual([{ fiber: 'cotton', percent: 100, raw: '100% Cotton' }]);
+    expect(p.composition.some((c) => c.fiber === 'polyester')).toBe(false);
+    expect(p.gsm).toBe(180); // the main product's weight, not the recommendation's 90
+  });
+
+  it('trusts an adapter-provided composition over a page recommendation (H&M bug)', () => {
+    // Reproduces the live H&M failure: the adapter reads the true composition
+    // ("Polyester 100%"), but the page also renders a recommended product whose
+    // fabric ("92% Cotton") is NOT inside a recognizable "recommend"/"related"
+    // container. The provided composition must win — we must not dilute it with a
+    // broad DOM scan.
+    const doc = docFrom(`<html><head><meta property="og:title" content="Mesh Vest Top" /></head>
+      <body><main>
+        <h1>Mesh Vest Top</h1>
+        <div class="rec-card"><p>Cotton Twill Cap 92% Cotton, 8% Elastane</p></div>
+      </main></body></html>`);
+    const p = extractGeneric(doc, 'https://www2.hm.com/en_us/productpage.1.html', { title: 'Mesh Vest Top', priceText: '14.99', specText: 'Polyester 100%' })!;
+    expect(p.composition).toEqual([{ fiber: 'polyester', percent: 100, raw: 'Polyester 100%' }]);
+    expect(p.composition.some((c) => c.fiber === 'cotton')).toBe(false);
+  });
+
   it('falls back to inline SPA state script for composition', () => {
     const doc = docFrom(`<html><head>
       <meta property="og:title" content="AIRism Cotton Oversized T-Shirt" />
